@@ -2,8 +2,8 @@
 *.als.bak
 # alloy6 exec writes solution markdown + receipt.json into a dir
 # named after the .als stem; not worth tracking
-alloy/**/receipt.json
-alloy/**/*-solution-*.md
+**/receipt.json
+**/*-solution-*.md
 
 # TLA+ (Toolbox + TLC)
 *.toolbox/
