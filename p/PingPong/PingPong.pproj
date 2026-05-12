@@ -1,0 +1,10 @@
+<!-- P project file for the actor-model ping-pong probe -->
+<Project>
+<ProjectName>PingPongProbe</ProjectName>
+<InputFiles>
+  <PFile>./PSrc/</PFile>
+  <PFile>./PSpec/</PFile>
+  <PFile>./PTst/</PFile>
+</InputFiles>
+<OutputDir>./PGenerated/</OutputDir>
+</Project>

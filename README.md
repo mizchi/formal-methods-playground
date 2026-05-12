@@ -19,6 +19,7 @@ counter-example style, and effort cost become concrete.
 | [`rocq/`](rocq/) | Rocq (née Coq) | older ITP, mature ecosystem |
 | [`moonbit/`](moonbit/) | MoonBit `moon prove` | Dafny-style annotations → Why3 → SMT |
 | [`terraform-reachability/`](terraform-reachability/) | Alloy applied | microservice reachability graph from terraform SGs |
+| [`p/`](p/) | P language | actor-model state machines with built-in checker |
 
 ## Tool selection guide
 
@@ -53,6 +54,7 @@ should have a top-of-file comment block with:
 | Lean | `lean/Rbac.lean` | RBAC role-hierarchy monotonicity, universal over Permission |
 | MoonBit | `moonbit/checkout_form/` | translates to Why3 cleanly; prover step blocked by Why3 1.8.2 ↔ Z3 4.16 / CVC5 1.3 version regex mismatch |
 | Alloy applied | `terraform-reachability/` | 3-service stack + SG ingress edges; direct safety UNSAT, transitive surfaces proxy-chain path |
+| P | `p/PingPong/` | two-actor ping-pong + safety monitor; 1000 schedules, 0 bugs |
 | Rocq | — | covered by Lean for ITP duties; revisit when a flagship library (CompCert / Iris) becomes load-bearing |
 
 See [`findings.md`](findings.md) for the comparative

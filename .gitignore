@@ -44,3 +44,7 @@ _CoqProject.d
 .idea/
 *.swp
 .DS_Store
+
+# P
+PGenerated/
+PCheckerOutput/

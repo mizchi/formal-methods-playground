@@ -282,6 +282,84 @@ event-sourcing direction matters for the actual project.
 
 ---
 
+## P — sister probe of TLA+'s ActorMailbox
+
+`p/PingPong/` re-expresses the actor-model problem in
+Microsoft's P language. Same domain (Sender + Receiver
+exchanging messages), but where the TLA+ version had to
+hand-model a mailbox as `Seq` and check FIFO via a prefix
+invariant, P has actors + typed events as built-in primitives
+and the checker's scheduler handles the interleaving.
+
+### What I tripped on
+
+1. **Setup cost.** P is a .NET tool, not packaged in nixpkgs.
+   Required `dotnet-sdk_8` in flake.nix + `dotnet tool install
+   --global P` + a `DOTNET_ROOT` export pointing at
+   `${pkgs.dotnet-sdk_8}/share/dotnet` because otherwise the
+   `p` binary aborts with "App host version: 8.0.26" —
+   the wrapper script can't find the runtime nix ships
+   alongside the SDK.
+2. **Reserved keyword `sent`.** Compile errored with
+   "`sent` keyword is only supported by PVerifier backend"
+   when used as a normal variable name. Renamed to
+   `roundTrips`. Not in the P language reference's reserved
+   list as prominently as one would hope.
+3. **Modules are needed for the `test` clause.** `assert Spec
+   in (union Sender, Receiver, { Test })` doesn't parse. The
+   bare machine name needs a wrapping `module = { ... };`
+   declaration; then `union <Module>, ...` works.
+
+### Empirical run
+
+```
+p check --schedules 1000
+... Found 0 bugs.
+... Explored 1000 schedules
+... Number of scheduling points in terminating schedules: 18
+```
+
+Default strategy is `random`. PCT, probabilistic, and POS
+schedulers are alternatives (`--sch-pct`, `--sch-probabilistic`,
+`--sch-pos`). The 18 scheduling points per schedule means each
+trial walks 18 message-delivery decisions; with 1,000 trials
+the cumulative interleaving coverage is significant for a
+two-actor model.
+
+### What P offers that TLA+ doesn't
+
+The killer feature is **code generation**. The same .p file
+that the checker analyses can compile to executable C# or Java
+(`--mode=codegen` flag). Spec ↔ implementation correspondence
+is structural, not maintained by hand. This is the structural
+guarantee TLA+ cannot deliver — the spec and impl have to be
+re-aligned manually whenever either changes.
+
+For systems where the actor model is the production
+architecture (Akka / Orleans / Erlang-shaped), this is real
+ROI. For systems where the spec is auxiliary to a Go / Rust
+impl, TLA+ is more appropriate because the code generation
+target wouldn't be used anyway.
+
+### What TLA+ offers that P doesn't
+
+Universal range — TLA+ models arbitrary state machines with
+arbitrary mathematical state, not just actor-shaped systems.
+For the EventSourcing probe in this same repo, TLA+'s
+`RECURSIVE Replay` + state-as-fold-of-log shape is
+straightforward; doing the same in P would require
+reformulating the log as a queue and the reducer as a
+message handler, which warps the model.
+
+### Picking between them
+
+- Actor-shaped impl + want exec code → **P**
+- Actor-shaped spec only + non-actor impl → **TLA+**
+- Non-actor systems (consensus, EventSourcing, distributed
+  protocol where state is the focus, not messages) → **TLA+**
+
+---
+
 ## TLA+ — Actor Model mailbox: bounded + FIFO + eventual delivery
 
 `tla/ActorMailbox.tla` — two actors send each other typed
