@@ -46,6 +46,8 @@ should have a top-of-file comment block with:
 | --- | --- | --- |
 | Alloy | `alloy/app-rbac.als` | RBAC + screen navigation; UNSAT / SAT all 3 commands |
 | TLA+ | `tla/OrderCheckout.tla` | async order state machine + safety + liveness; 20 states, depth 6 |
+| TLA+ | `tla/EventSourcing.tla` | replay determinism + snapshot consistency on a payment ledger; 118 states, depth 5 |
+| TLA+ | `tla/ActorMailbox.tla` | per-pair FIFO + bounded mailbox + eventual delivery under WF on Receive; 1,681 states, depth 13 |
 | Dafny | `dafny/checkout_form.dfy` | conditional form invariants + loop verification; 7 verified, 0 errors |
 | Dafny | `dafny/rbac_screens.dfy` | same RBAC + screen-nav domain as the Alloy probe, proved universally over trace length; 12 verified, 0 errors |
 | Lean | `lean/Rbac.lean` | RBAC role-hierarchy monotonicity, universal over Permission |

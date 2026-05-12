@@ -238,6 +238,102 @@ Alloy job. The two are not interchangeable.
 
 ---
 
+## TLA+ — EventSourcing replay determinism + snapshot consistency
+
+`tla/EventSourcing.tla` — a payment ledger whose state (`balance`)
+is derived from an append-only `log` of Deposit / Withdraw
+events. The probe verifies the four invariants that any
+event-sourcing implementation has to satisfy regardless of
+sequencing:
+
+  - `NonNegativeBalance` — Withdraw is guarded; the SMT confirms
+    no reachable state goes negative.
+  - `ReplayDeterminism` — at every step, `balance = Replay(0,
+    log)`. The live state and the log-derived state never
+    diverge.
+  - `SnapshotIsPrefix` — `snapshot.seq` is always a prefix of
+    `log`; snapshots only ever capture historical truth.
+  - `SnapshotConsistency` — replaying tail events from a
+    snapshot lands on the live balance. This is the
+    "restart from snapshot" guarantee that makes snapshots
+    useful at all.
+
+TLC explores 118 distinct states at depth 5 (Amounts = {1,2},
+MaxLogLen = 3). All four invariants hold.
+
+### Why this is the right tool
+
+The interesting question in EventSourcing is *temporal* —
+"replay from any prefix matches the live state" only makes
+sense as a property *across* states. Alloy 6's bounded scope
+could express the same shape but TLA+'s `[][Next]_vars`
+matches the operational pipeline more directly. The recursive
+`Replay` operator + `Fold`-style invariant are TLA+'s exact
+sweet spot.
+
+### Sketch of additions
+
+Schema migration (replay an old event format under a new
+reducer), idempotency (dedup-by-id), and causal ordering
+(events with happens-before respected) all slot into the same
+shape — add the variable, add the action, the invariant chain
+extends. Recommended next-probe target if the
+event-sourcing direction matters for the actual project.
+
+---
+
+## TLA+ — Actor Model mailbox: bounded + FIFO + eventual delivery
+
+`tla/ActorMailbox.tla` — two actors send each other typed
+messages through per-actor mailboxes. The probe verifies:
+
+  - `BoundedMailbox` (safety) — no mailbox exceeds
+    `MaxMailbox`; Send guards against overflow.
+  - `PerPairFIFO` (safety) — for any `(from, to)` pair, the
+    `recv_log` is a prefix of the `sent_log`. No reorder, no
+    drop.
+  - `EventualDelivery` (liveness) — any non-empty mailbox
+    eventually drains, under weak-fairness on `Receive`.
+
+TLC explores 1,681 distinct states at depth 13 (Actors = {a1,
+a2}, Messages = {m1, m2}, MaxMailbox = 2). All three
+properties hold; the liveness check completes in well under a
+second with the `TotalSentBound` CONSTRAINT capping Send
+activity.
+
+### Why TLA+ specifically (and not P)
+
+P would be the canonical tool here — actors are language
+primitives, the checker is purpose-built for message-passing
+state machines, and successful proofs come with generated
+executable code. TLA+ is "fine," not best. The reason this
+probe is in TLA+ rather than P is purely operational: P is
+not in nixpkgs, requires .NET, and would add ~20 minutes of
+toolchain plumbing for a single probe. The TLA+ version is
+honest (uses fairness annotations, models the mailbox as Seq
+explicitly, verifies the FIFO via prefix invariant) and
+generalises to more actors / more message types by changing
+the CONSTANT values.
+
+For an actual production system: if the impl is C# / Java,
+adopt P. If the impl is Rust, adopt Stateright. If the impl
+is something else, keep the spec in TLA+ and accept the
+spec/impl two-side maintenance.
+
+### Lesson from the TLC warning
+
+TLC warned: *"Declaring state or action constraints during
+liveness checking is dangerous"*. The `TotalSentBound`
+CONSTRAINT bounds exploration but can mask liveness violations
+(the constraint may prevent the system from reaching the
+violating state). The warning is a real caveat — in this
+probe the constraint is benign because Send isn't part of any
+liveness claim, but in larger models the right move is
+usually to use `MAXLEN` on sent_log via fairness annotations
+rather than via state-constraint trimming.
+
+---
+
 ## Dafny — same RBAC + screen-nav domain as the Alloy probe
 
 A second Dafny probe in `dafny/rbac_screens.dfy` re-expresses the
