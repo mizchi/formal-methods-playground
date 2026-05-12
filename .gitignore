@@ -1,0 +1,42 @@
+# Alloy
+*.als.bak
+
+# TLA+ (Toolbox + TLC)
+*.toolbox/
+MC_*.tla
+MC_*.cfg
+states/
+*.tla.bak
+
+# Dafny
+*.dll
+*.pdb
+*-go/
+*-py/
+*-js/
+*-cs/
+obj/
+bin/
+
+# Lean
+.lake/
+lake-packages/
+build/
+.olean
+
+# Rocq
+*.vo
+*.vos
+*.vok
+*.glob
+.*.aux
+_build/
+_CoqProject.d
+.lia.cache
+.nia.cache
+
+# editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
