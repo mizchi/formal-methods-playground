@@ -18,9 +18,9 @@
  *
  * Run from this directory (Alloy 6 CLI):
  *
- *   alloy execute --command ViewerScopedToPublicScreens app-rbac.als
- *   alloy execute --command NonAdminNeverAtSettings     app-rbac.als
- *   alloy execute --command AdminCanReachSettings        app-rbac.als
+ *   alloy6 exec --command ViewerScopedToPublicScreens app-rbac.als
+ *   alloy6 exec --command NonAdminNeverAtSettings     app-rbac.als
+ *   alloy6 exec --command AdminCanReachSettings        app-rbac.als
  *
  * First two should report "No counterexample found".
  * Third should produce a concrete trace with an Admin at Settings.

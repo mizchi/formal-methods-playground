@@ -6,11 +6,12 @@ Probes for Alloy 6 (the version with the temporal `var` /
 ## Install
 
 ```sh
-# macOS
-brew install alloy
+# Repo-local (recommended)
+cd /path/to/prove-playground
+nix develop      # devShell brings alloy6, tlc, dafny, coqc, elan, z3, cvc5
 
-# Nix
-nix run nixpkgs#alloy
+# Or globally via nix
+nix profile install nixpkgs#alloy6
 ```
 
 ## Run
@@ -20,7 +21,7 @@ Two run styles:
 
 ```sh
 # headless: enumerate counterexamples / instances on the CLI
-alloy execute --command <CommandName> app-rbac.als
+alloy6 exec --command <CommandName> app-rbac.als
 
 # GUI: interactive theorem exploration + instance visualiser
 alloy
