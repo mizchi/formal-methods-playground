@@ -1,0 +1,294 @@
+# Findings — when each tool actually earned its slot
+
+Raw notes from running each probe against an application-level
+spec. Written after the fact, with the lesson it taught.
+
+The probes are all in the repo:
+
+| Tool | Probe | What it expresses |
+| --- | --- | --- |
+| Alloy 6 | `alloy/app-rbac.als` | RBAC + screen-navigation safety + sanity |
+| TLA+ | `tla/OrderCheckout.tla` | async order state machine + safety + liveness |
+| Dafny | `dafny/checkout_form.dfy` | conditional form invariants + loop verification |
+| Lean 4 | `lean/Rbac.lean` | role-hierarchy monotonicity, universal proof |
+
+---
+
+## Alloy 6 — RBAC + screen navigation
+
+### What it expresses well
+
+Relations are first-class. `role`, `at`, `LoggedIn` are all
+relations; `allowedFor[r]` is a function returning a set, written
+exactly like a lookup table. Safety properties read like English:
+
+```
+assert NonAdminNeverAtSettings {
+  always (all u: LoggedIn |
+    u.role != Admin implies u.at != Settings)
+}
+```
+
+That maps 1:1 to "no non-admin is ever observed at Settings."
+No bookkeeping, no manual encoding of the transition system —
+`always` + `implies` is just there.
+
+### What I tripped on
+
+`alloy6 exec` (Nix package name; the doc-traditional spelling is
+`alloy execute`). On second run, the per-command output dir
+(`alloy/app-rbac/`) already existed and the CLI refused to
+overwrite without `-f`. Easy fix; documented in `alloy/README.md`.
+
+### Surface readability score
+
+**9 / 10** for this domain. The model file is a faithful
+machine-readable rewrite of the spec sentence.
+
+### Counter-example quality
+
+Visual graphs in the Analyzer GUI. CLI mode produces
+`<Cmd>-solution-0.md` with the instance written as Alloy
+relations. Easy to read for a 4-instance scope, harder past
+scope 8.
+
+### When to reach for it again
+
+Any time the property is naturally relational: permission
+hierarchies, configuration constraints, "are these two graphs
+related," ownership / RBAC / namespace-scoping. Anything you
+can draw as nodes-and-edges and check "does this property hold
+in every small instance."
+
+---
+
+## TLA+ (TLC) — async order checkout
+
+### What it expresses well
+
+Async actions + fairness + liveness. The order state machine
+has a `paymentPending` step that can resolve three ways
+(`PaymentSucceeded`, `PaymentFailed`, `PaymentTimeout`), and we
+want to assert *something will fire eventually* — not just
+*nothing wrong fires*. That's the kind of question Alloy
+shrugs at and TLA+ takes seriously:
+
+```
+Spec ==
+    /\ Init
+    /\ [][Next]_vars
+    /\ WF_vars(PaymentSucceeded)
+    /\ WF_vars(PaymentFailed)
+    /\ WF_vars(PaymentTimeout)
+
+PaymentResolves ==
+    (state = "paymentPending") ~> (state \in {"paid", "cart", "cancelled"})
+```
+
+The `WF_vars(...)` clauses are the spec's contract with itself
+about progress. Drop them and `~>` fails with a stutter-step
+counter-example. That feedback loop is the value proposition.
+
+### What I tripped on
+
+TLC defaults to flagging deadlock. The order spec is by design
+terminal in `cancelled` / `refunded` / `shipped` — no enabled
+actions. First run produced a "Deadlock reached" error on the
+trace `cart → cancelled`. Fixed with `CHECK_DEADLOCK FALSE` in
+the `.cfg`. Real concurrency specs (servers, protocols) rarely
+deadlock by design, so this is a probe-specific quirk; document
+it in the config rather than mutate the spec.
+
+### Surface readability score
+
+**6 / 10**. The ASCII math (`/\` `\/` `\E` `~>` `[]` `<>`) is
+a real barrier for review. PlusCal as an imperative wrapper
+helps; pure TLA+ as written here is honest about being a math
+language. The spec is small and structured, but a non-formalist
+needs ~30 minutes of orientation before reading is useful.
+
+### Counter-example quality
+
+Best in class for state machines. The trace is a numbered list
+of states with the action that fired between each, plus values
+of every state variable. The
+`State 1 ──[CancelCart]──> State 2` form is exactly the trace
+a developer would want.
+
+### When to reach for it again
+
+Any spec where time / async / fairness is load-bearing.
+Distributed protocols, retry semantics, eventual consistency,
+ordering guarantees, "this background task can't get stuck."
+Strongly preferred over Alloy when state space is unbounded
+or fairness is the actual question.
+
+---
+
+## Dafny — checkout form validation
+
+### What it expresses well
+
+Conditional invariants on data, discharged by SMT. The form
+predicate:
+
+```
+predicate IsValidForm(f: Form) {
+  && f.total > 0
+  && (match f.kind
+        case Physical => f.shipping.Some?
+        case Digital  => f.email.Some? && |f.email.value| > 0)
+}
+```
+
+Reads like a piece of the actual product spec. Constructors
+declare `ensures IsValidForm(f)` and Z3 closes the obligation
+in milliseconds. The loop in `SumPrices` carries two invariants
+(`total >= 0` and `i > 0 ==> total > 0`) and SMT handles the
+case split between "first iteration" and "subsequent iterations"
+without manual help.
+
+### What I tripped on
+
+Nothing for this probe. Dafny's sweet spot — sequential code +
+pre/post + loop invariants — is its sweet spot exactly because
+SMT auto-discharges it. The friction starts when the obligation
+needs non-linear arithmetic or higher-order quantifiers; this
+probe has neither.
+
+### Surface readability score
+
+**8 / 10**. Pre/post/loop-invariant annotations are a notation
+overhead, but they ARE the proof — there's no separate proof
+script. Closer to "writing typed code" than "writing math."
+Reviewers who can read TypeScript or Rust can roughly read this.
+
+### Counter-example quality
+
+Dafny outputs are textual ("postcondition not established")
+with a hint at the violating path. Less visual than Alloy /
+TLA+ but the locations are precise (line + column of the
+violating assertion).
+
+### When to reach for it again
+
+Sequential code where the bug is "an invariant gets broken on
+some path." Most form-validation, data-normalisation,
+parser-like, simple-algorithm work fits. Don't reach for it
+when the answer needs temporal reasoning (TLA+) or universal
+quantification with structural recursion (Lean).
+
+---
+
+## Lean 4 — RBAC monotonicity
+
+### What it expresses well
+
+Universal quantification over a structurally-defined type.
+The Alloy probe checks RBAC for scope 4 — that's 4 users, 4
+screens, 4 roles, with a finite trace. The Lean probe proves
+the same kind of monotonicity property *for every Permission
+that will ever exist in the type Permission*:
+
+```
+theorem viewer_subset_editor :
+    ∀ p : Permission, permits .viewer p = true → permits .editor p = true := by
+  intro p h
+  cases p <;> simp_all [permits]
+```
+
+Add a new constructor to `Permission`, re-run, and Lean will
+require you to handle the new case before the proof type-checks.
+That's the integrity contract — the theorem stays true through
+edits or fails type-checking.
+
+### What I tripped on
+
+First version used `intro p _` (discard the hypothesis),
+expecting `simp [permits]` to close every case. The `manage`
+case failed because the goal reduced to `false = true` and
+without the discarded hypothesis there was no way to close it.
+Switching to `intro p h` and `simp_all [permits]` propagates
+the absurd hypothesis through the case split and the proof
+closes vacuously. This is the kind of small tactic-language
+detail you don't have in a model checker — there's nothing to
+"prove" wrong, there's a goal that's open.
+
+### Surface readability score
+
+**5 / 10** for non-Lean users, **8 / 10** if `simp` and `cases`
+are familiar. The notation is dependent-types; the proof script
+is tactic-mode. Better than Coq notation, still further from
+"plain code" than Dafny.
+
+### Counter-example quality
+
+Not a counter-example tool. Lean gives you "unsolved goal at
+line N, case M" with the open proof state. That's *better*
+than a counter-example if you're trying to fix a wrong proof,
+*worse* if you're trying to find a violating instance — the
+shape of "wrong" is different.
+
+### When to reach for it again
+
+Properties that are *theorems*, not bug-hunts. "This function
+respects this invariant for every input" — that's a Lean job.
+"There's no 4-user trace that triggers this state" — that's an
+Alloy job. The two are not interchangeable.
+
+---
+
+## Pickings — per use case
+
+The mapping that came out of writing the probes:
+
+| Use case shape | Pick |
+| --- | --- |
+| RBAC tables, scope-permissions, "who can do what" | **Alloy** (bounded check is plenty; instances are reviewable) |
+| Universal RBAC monotonicity ("editor strictly extends viewer") | **Lean** (Alloy can't quantify over arbitrary Permission types) |
+| Screen-navigation graphs, workflow safety in finite scope | **Alloy 6** (temporal extension; no need to lift to TLA+) |
+| Async state machine, payment / retry / timeout | **TLA+** (fairness + liveness are first-class) |
+| Distributed protocol, eventual consistency | **TLA+** |
+| Conditional invariants on records, validation predicates | **Dafny** (SMT discharges case-splits trivially) |
+| Sequential algorithm with non-trivial loop invariants | **Dafny** |
+| Refinement: "this implementation implements this spec" | **Dafny** or **Lean** depending on automation budget |
+| Property that needs to hold for ALL elements of a recursive type | **Lean** (Alloy cannot; Dafny can with quantifiers but slowly) |
+
+### Lessons that didn't fit a row
+
+- **Alloy + Lean is the natural pairing for RBAC**: Alloy
+  catches scope-5 surprise interactions ("the org has 3 admins,
+  one impersonates another"), Lean proves the table itself is
+  monotonic ("editor ≥ viewer for any permission you might add
+  in the future"). Both are RBAC, but different questions.
+- **TLA+ replaces Alloy 6's temporal only when fairness is in
+  play.** If the question is "in any 6-step trace, does X
+  hold," Alloy 6 is faster to write and more visual. The
+  moment "X eventually happens under fairness" enters the
+  vocabulary, TLA+ takes over.
+- **Dafny will not replace a runtime test.** Verifying that
+  `SumPrices` returns `total > 0` does NOT tell you the
+  function is actually called with `prices != []` in
+  production. Static verification + runtime tests are
+  complementary, not substitutes.
+- **Lean's bootstrap is the most expensive of the four.** The
+  toolchain (elan + lake) and mathlib4 download are
+  multi-minute on first run. Worth it for theorems; overkill
+  for one-off "does this hold" questions.
+
+---
+
+## Next probes (open invitation)
+
+- TLA+ retry-with-exponential-backoff probe (matches pkspec's
+  `parallel.background` / readyProbe semantics).
+- Dafny refinement: a more complex algorithm where the SMT
+  starts to struggle and the user has to add `assert` waypoints.
+- Lean: prove `pkspec.internal/executor.Tally.IsGreen` is the
+  characteristic function of `Failed = 0 ∧ Errored = 0 ∧
+  Skipped = 0` — using a Lean datatype that mirrors the Go one.
+- Z3 / cvc5 raw: write a small SMT-LIB file that solves the
+  same RBAC question in 30 lines, as the "tool you reach for
+  when even Dafny is overkill" baseline.
+- Iris-on-Rocq: only if a concurrent data-structure question
+  shows up that none of the above four can handle.

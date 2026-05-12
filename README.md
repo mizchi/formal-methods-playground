@@ -42,8 +42,12 @@ should have a top-of-file comment block with:
 
 | Tool | Probes | Notes |
 | --- | --- | --- |
-| Alloy | `app-rbac.als` | RBAC + screen navigation; complete |
-| TLA+ | — | next probe candidate: async background-process readyProbe |
-| Dafny | — | next probe candidate: a single verified sort |
-| Lean | — | next probe candidate: a small universally-quantified invariant |
-| Rocq | — | optional; revisit when a flagship library (CompCert / Iris) becomes load-bearing |
+| Alloy | `alloy/app-rbac.als` | RBAC + screen navigation; UNSAT / SAT all 3 commands |
+| TLA+ | `tla/OrderCheckout.tla` | async order state machine + safety + liveness; 20 states, depth 6 |
+| Dafny | `dafny/checkout_form.dfy` | conditional form invariants + loop verification; 7 verified, 0 errors |
+| Lean | `lean/Rbac.lean` | RBAC role-hierarchy monotonicity, universal over Permission |
+| Rocq | — | covered by Lean for ITP duties; revisit when a flagship library (CompCert / Iris) becomes load-bearing |
+
+See [`findings.md`](findings.md) for the comparative
+notes — surface readability, counter-example quality, and the
+per-use-case picking matrix that came out of running all four.
