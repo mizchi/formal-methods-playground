@@ -238,6 +238,74 @@ Alloy job. The two are not interchangeable.
 
 ---
 
+## MoonBit `moon prove` — checkout-form-shape probe
+
+### What it expresses well (in principle)
+
+The annotation surface is Dafny-shaped — `where { proof_require:
+..., proof_ensure: result => ... }` on the function signature.
+For our two-function probe the MoonBit source is short and
+reads cleanly. Translation to Why3 (`.mlw`) produces faithful
+output: `requires { ... }` / `ensures { ... }` clauses + an
+imperative `let ... = if ... then ... else ...` body.
+
+### What I tripped on
+
+1. **Per-package activation gate.** Without `options(
+   "proof-enabled": true )` in `moon.pkg`, `moon prove` silently
+   exits 0 without doing anything. No diagnostic. This swallowed
+   30 minutes of "is it actually checking" debugging — addressed
+   in moonbit/README.md as the lead caveat.
+2. **`@int.MIN_VALUE` not expressible in proof annotations.** The
+   logic-side language is a subset of MoonBit; standard-library
+   constants are not all reachable. Worked around with a literal
+   `-2147483648`. Documented in the probe's `safe_abs` comment.
+3. **Toolchain version mismatch.** Why3 1.8.2 (nixpkgs latest)
+   does not recognise Z3 4.16.0, CVC5 1.3.3, or Alt-Ergo 2.6.3
+   (also nixpkgs latest). All three are dropped from moon's
+   prover-harness pool with "no configured provers are
+   available." The MoonBit → Why3 translation works; the
+   Why3 → SMT step does not.
+
+### Surface readability score
+
+**8 / 10** — the annotation surface is as compact as Dafny's
+and the `where { }` placement reads naturally. The proof
+language being a *subset* of MoonBit (not a separate proof
+script DSL) is a real win for review.
+
+### Counter-example quality
+
+Not exercised — the toolchain version gap prevents the SMT
+solvers from ever running. The translation IR (Why3 .mlw) is
+inspectable in `_build/verif/<pkg>.mlw` and is what you would
+debug against if proofs failed.
+
+### When to reach for it again
+
+**Today**: only if the version pinning headache is paid up-front
+(matching nixpkgs derivations of Z3 / CVC5 / Alt-Ergo to a
+Why3-recognised version window). Dafny is friction-free where
+MoonBit's pipeline is sensitive — Dafny ships its SMT bundle
+inline so there is no version-recognition step.
+
+**Soon (next nixpkgs unstable bump of Why3 to 1.9+)**: probably
+just works, at which point MoonBit's compelling pitch — proof
+annotations directly on the production language, no separate
+proof script, full Why3 IR visibility — becomes operational.
+
+### Architectural note
+
+MoonBit + Why3 is a different style from Dafny's monolith.
+Dafny owns the entire pipeline including the SMT call;
+MoonBit emits Why3 ML, then defers to whatever proves the user
+has wired up. This is *cleaner* in the sense that Why3 is the
+broader-standard IR (used by Frama-C, Krakatoa, EasyCrypt) —
+but it shifts the version-compat surface onto the user, which is
+the exact thing Dafny's bundled-everything approach hides.
+
+---
+
 ## Pickings — per use case
 
 The mapping that came out of writing the probes:

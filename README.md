@@ -17,6 +17,7 @@ counter-example style, and effort cost become concrete.
 | [`dafny/`](dafny/) | Dafny | SMT-backed program verification |
 | [`lean/`](lean/) | Lean 4 + mathlib4 | interactive theorem prover |
 | [`rocq/`](rocq/) | Rocq (née Coq) | older ITP, mature ecosystem |
+| [`moonbit/`](moonbit/) | MoonBit `moon prove` | Dafny-style annotations → Why3 → SMT |
 
 ## Tool selection guide
 
@@ -46,6 +47,7 @@ should have a top-of-file comment block with:
 | TLA+ | `tla/OrderCheckout.tla` | async order state machine + safety + liveness; 20 states, depth 6 |
 | Dafny | `dafny/checkout_form.dfy` | conditional form invariants + loop verification; 7 verified, 0 errors |
 | Lean | `lean/Rbac.lean` | RBAC role-hierarchy monotonicity, universal over Permission |
+| MoonBit | `moonbit/checkout_form/` | translates to Why3 cleanly; prover step blocked by Why3 1.8.2 ↔ Z3 4.16 / CVC5 1.3 version regex mismatch |
 | Rocq | — | covered by Lean for ITP duties; revisit when a flagship library (CompCert / Iris) becomes load-bearing |
 
 See [`findings.md`](findings.md) for the comparative

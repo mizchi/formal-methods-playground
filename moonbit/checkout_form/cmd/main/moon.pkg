@@ -1,0 +1,7 @@
+// import {
+//   "mizchi/checkout_form" @lib,
+// }
+
+options(
+  "is-main": true,
+)
