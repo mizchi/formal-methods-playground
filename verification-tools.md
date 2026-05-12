@@ -11,6 +11,67 @@ classify your problem along three axes, then the tool falls out.
 
 ---
 
+## Empirical conclusion — after probing each tool on this repo
+
+After writing one or more probes per tool against
+application-level specs (RBAC, multi-tenant isolation,
+expense-approval workflow, terraform reachability, async
+order checkout, event-sourced ledger, actor-model
+ping-pong), the operational picking rule is:
+
+1. **Default: Alloy 6.** Structural, relational, finite-scope
+   bug-hunting fits the vast majority of application-level
+   spec questions — RBAC, screen navigation, ownership,
+   multi-tenancy, reachability over a graph, workflow
+   state-machine safety. The surface reads like the design
+   doc; counter-examples are concrete instances; setup cost
+   is one nix package.
+2. **Escalate to TLA+** when *fairness* or *liveness* enters
+   the vocabulary. Eventual consistency, retry semantics,
+   "this message is eventually delivered," "this state is
+   eventually resolved" — Alloy 6 has temporal operators but
+   no fairness primitives. TLA+ does.
+3. **P** for actor-shaped *production* code where the spec
+   ↔ implementation alignment matters enough to spend on
+   codegen. Setup is the heaviest (.NET SDK + `DOTNET_ROOT`
+   plumbing + per-user `dotnet tool install`), but the
+   spec-becomes-impl pitch is unique among the tools tried.
+4. **Dafny** for code-level reasoning — sequential algorithm
+   correctness, conditional invariants on records, loop
+   invariants. Not the right tool for "the system has this
+   property over any trace"; that's TLA+ or Alloy. The right
+   tool for "this function preserves this contract."
+5. **Lean 4 / Rocq** only when the proof obligation is
+   genuinely *universal* (quantification over an open
+   inductive type, not just over a small scope). Most
+   application-level work doesn't need this.
+6. **MoonBit `moon prove`** — annotation surface is the
+   cleanest of the SMT-backed tools, translation to Why3 is
+   correct, but the prover step is currently blocked on the
+   nixpkgs Why3 ↔ Z3/CVC5 generation mismatch. Revisit when
+   nixpkgs upgrades Why3 to 1.9+.
+
+### Picking-rule one-liner
+
+Start in Alloy. Only move when you hit something it can't
+say: fairness → TLA+; codegen-from-spec → P; theorem about
+arbitrary recursive types → Lean; "this function body is
+correct" → Dafny.
+
+This collapses to ~95% Alloy + occasional escalation for
+fairness-flavoured work, which is itself a small fraction
+of application-level specs.
+
+### What I'd write next
+
+If a project actually adopts this stack, the natural
+follow-on is a slim authoring guide ("how to start writing
+your domain in Alloy in 30 minutes") plus a few escalation
+recipes ("when your Alloy probe is feeling cramped, here's
+the TLA+ template for the same shape").
+
+---
+
 ## The three axes
 
 | Axis | Endpoints |

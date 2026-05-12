@@ -282,6 +282,113 @@ event-sourcing direction matters for the actual project.
 
 ---
 
+## Alloy — multi-tenant data isolation
+
+`alloy/multi-tenant.als` — sig hierarchy of `User × Tenant ×
+Document × Role`. The integrity claim is that a Regular user
+never reads a Document outside their own Tenant. Surface:
+
+```
+assert CrossTenantReadBlocked {
+  all u: User, d: Document |
+    (some ur: UserRole |
+       ur.user = u and ur.role = Regular and CanRead[u, d])
+      implies u.tenantOf = d.ownedBy
+}
+check CrossTenantReadBlocked for 4
+```
+
+Three results:
+
+  - `CrossTenantReadBlocked`  UNSAT — Regular users stay in lane
+  - `WithinTenantReachable`   SAT   — sanity, same-tenant reads work
+  - `AdminOverrideBounded`    SAT   — BillingAdmin role is the
+                                       intentional break-glass; this
+                                       run surfaces the trace where
+                                       cross-tenant access happens
+                                       (architect must explicitly
+                                       accept it)
+
+Lesson: Alloy makes the "structural invariant + one carved-out
+exception" pattern declarable rather than commented. The
+override is an EXPRESSED part of the spec, not an undocumented
+deviation.
+
+---
+
+## Alloy — workflow-approval state machine (temporal)
+
+`alloy/workflow-approval.als` uses Alloy 6's `var` + `always`
++ prime notation to express an expense-approval flow:
+
+```
+  submitted  →  underReview  →  approved
+                          \─→  rejected
+```
+
+Verifies four claims:
+
+  - `NoSelfApprovalAction`   UNSAT — `Approve` action's
+                                      pre-condition forbids
+                                      the submitter from
+                                      approving their own
+                                      request
+  - `ApprovalRequiresReview` UNSAT — `approved` is reached
+                                      only from `underReview`,
+                                      never directly from
+                                      `submitted`
+  - `MonotonicResolution`    UNSAT — once terminal, status
+                                      stays terminal
+  - `EveryRequestResolves`   SAT   — sanity / non-vacuity
+
+### Lessons / gotchas
+
+1. **`always (some action)` deadlocks at terminal states.** The
+   first version of this probe had `EveryRequestResolves`
+   coming back UNSAT because the behavior fact required
+   *some* action to fire every step. Once all requests are
+   approved / rejected, no progress action is enabled and the
+   trace cannot extend. Fix: add an explicit `pred Stutter
+   { all r: Request | r.status' = r.status }` and disjoin it
+   into the behavior fact. Without this, the sanity run
+   silently fails for the wrong reason.
+2. **State-transition assertions need a "BECOMES" guard.** The
+   first version of `ApprovalRequiresReview` was
+
+   ```
+   r.status' = approved implies r.status = underReview
+   ```
+
+   which incorrectly fired on the Stutter case (`approved →
+   approved`, where `r.status' = approved` is trivially true
+   but `r.status = underReview` is false). Correct form:
+
+   ```
+   (r.status' = approved and r.status != approved)
+     implies r.status = underReview
+   ```
+
+   This isolates the *transition* to approved. Pattern worth
+   internalising for any "X is only reached via Y"
+   state-machine claim in Alloy 6 temporal.
+
+### Why this earned its slot
+
+Workflow approval is the canonical "design doc that's
+slightly more than English" — one diagram with arrows, a few
+guard conditions in prose, the assumption that the team
+will implement it faithfully. Alloy lets you write the
+diagram + guards down once, in a form that catches both
+classes of failure: implementation drift (the SQL doesn't
+respect the guard) AND spec ambiguity (the prose under-
+specifies a corner). The two probes added here cover the
+two flavour-axes of app-level spec: *structural* (multi-
+tenant) and *behavioural* (workflow). Together with the
+existing `app-rbac.als`, Alloy now has three different
+shapes of probe in the repo.
+
+---
+
 ## P — sister probe of TLA+'s ActorMailbox
 
 `p/PingPong/` re-expresses the actor-model problem in

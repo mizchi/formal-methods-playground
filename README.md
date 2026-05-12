@@ -46,6 +46,8 @@ should have a top-of-file comment block with:
 | Tool | Probes | Notes |
 | --- | --- | --- |
 | Alloy | `alloy/app-rbac.als` | RBAC + screen navigation; UNSAT / SAT all 3 commands |
+| Alloy | `alloy/multi-tenant.als` | tenant isolation; cross-tenant read UNSAT, billing-admin override SAT |
+| Alloy | `alloy/workflow-approval.als` | expense-approval state machine; no self-approval / monotonic resolution / approval-via-review all UNSAT |
 | TLA+ | `tla/OrderCheckout.tla` | async order state machine + safety + liveness; 20 states, depth 6 |
 | TLA+ | `tla/EventSourcing.tla` | replay determinism + snapshot consistency on a payment ledger; 118 states, depth 5 |
 | TLA+ | `tla/ActorMailbox.tla` | per-pair FIFO + bounded mailbox + eventual delivery under WF on Receive; 1,681 states, depth 13 |
