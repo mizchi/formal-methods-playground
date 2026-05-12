@@ -238,6 +238,77 @@ Alloy job. The two are not interchangeable.
 
 ---
 
+## Dafny — same RBAC + screen-nav domain as the Alloy probe
+
+A second Dafny probe in `dafny/rbac_screens.dfy` re-expresses the
+Alloy probe's domain (Role × Screen × authorisation table ×
+adjacency graph) using Dafny's class-based state-machine
+encoding. Direct side-by-side comparison with `alloy/app-rbac.als`.
+
+### What Dafny adds over Alloy here
+
+| Concern | Alloy 6 | Dafny |
+| --- | --- | --- |
+| Property scope | `for 4 but 6 steps` (bounded) | universally quantified over `i` in history |
+| State carrier | `var sig LoggedIn { var at: Screen }` | `class Session { var screen; ghost var history }` |
+| "Never reaches Settings" check | scope-bounded counterexample search | one-line lemma discharged by SMT |
+| Cross-step invariant | `fact behavior { always Next }` | `ghost predicate Valid() reads this` |
+| Trace artefact | implicit (Alloy's temporal extension) | explicit `ghost var history: seq<Screen>` |
+| Counter-example | concrete instance graph | "could not be proved" + line number |
+
+The probe verifies *three* monotonic safety properties
+(`ViewerNeverAtSettings`, `EditorNeverAtSettings`,
+`NonAdminNeverAtSettings`) as lemmas. Each is one line of
+`ensures` plus an empty proof body — the SMT discharges them
+from the invariant chain inside `Valid()`. Alloy's
+counter-example-search story can't deliver universal guarantees
+of this kind; Dafny can.
+
+### What Dafny doesn't add
+
+The model still doesn't represent multiple concurrent sessions.
+Each `Session` instance is a single thread of navigation; a
+`Set<Session>` reasoning step would be additional work and the
+SMT would start needing manual help (fan-out frame conditions,
+modifies clauses across the set). Alloy 6 with `var sig LoggedIn
+in User` handles multi-user via the relation, almost for free.
+So even here the picking matrix holds: Alloy for "structural
+question over a population," Dafny for "guarantee for any single
+instance through any trace length."
+
+### What I tripped on
+
+`AdminCanReachSettings` initially failed with "precondition
+`Allowed(role, to)` could not be proved" — because the
+`Navigate` method's frame condition did not promise
+`role == old(role)`. Dafny conservatively assumed `role` might
+change across the call, losing the `role == Admin` fact mid-trace.
+
+Fix: add `ensures role == old(role)` to `Navigate`. This is the
+canonical "Dafny needs you to spell out what stays the same"
+gotcha. With it, all 12 verification conditions discharge.
+
+### Lemma effort cost
+
+Three of the four lemmas have *empty* proof bodies — SMT
+discharges them once `Valid()` is set up correctly. The lemma
+overhead is exactly:
+
+```dafny
+lemma NonAdminNeverAtSettings(s: Session)
+  requires s.Valid()
+  requires s.role != Admin
+  ensures forall i :: 0 <= i < |s.history| ==> s.history[i] != Settings
+{
+}
+```
+
+5 lines. That's the "what does adding a theorem cost in Dafny"
+data point: 5 lines per safety property, assuming the invariant
+already exists.
+
+---
+
 ## MoonBit `moon prove` — checkout-form-shape probe
 
 ### What it expresses well (in principle)

@@ -46,6 +46,7 @@ should have a top-of-file comment block with:
 | Alloy | `alloy/app-rbac.als` | RBAC + screen navigation; UNSAT / SAT all 3 commands |
 | TLA+ | `tla/OrderCheckout.tla` | async order state machine + safety + liveness; 20 states, depth 6 |
 | Dafny | `dafny/checkout_form.dfy` | conditional form invariants + loop verification; 7 verified, 0 errors |
+| Dafny | `dafny/rbac_screens.dfy` | same RBAC + screen-nav domain as the Alloy probe, proved universally over trace length; 12 verified, 0 errors |
 | Lean | `lean/Rbac.lean` | RBAC role-hierarchy monotonicity, universal over Permission |
 | MoonBit | `moonbit/checkout_form/` | translates to Why3 cleanly; prover step blocked by Why3 1.8.2 ↔ Z3 4.16 / CVC5 1.3 version regex mismatch |
 | Rocq | — | covered by Lean for ITP duties; revisit when a flagship library (CompCert / Iris) becomes load-bearing |
