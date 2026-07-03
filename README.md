@@ -21,6 +21,7 @@ counter-example style, and effort cost become concrete.
 | [`languages/rocq/`](languages/rocq/) | Rocq (née Coq) | older ITP, mature ecosystem |
 | [`languages/moonbit/`](languages/moonbit/) | MoonBit `moon prove` | Dafny-style annotations → Why3 → SMT |
 | [`usecases/terraform-reachability/`](usecases/terraform-reachability/) | Alloy applied | microservice reachability graph from terraform SGs |
+| [`usecases/wasmplane-route-placement/`](usecases/wasmplane-route-placement/) | Alloy applied | route snapshot placement bug witnesses and fixed-contract checks |
 | [`languages/p/`](languages/p/) | P language | actor-model state machines with built-in checker |
 
 ## Tool selection guide
@@ -68,6 +69,7 @@ should have a top-of-file comment block with:
 | Lean | `languages/lean/Rbac.lean` | RBAC role-hierarchy monotonicity, universal over Permission |
 | MoonBit | `languages/moonbit/checkout_form/` | executable tests pass; `moon prove` succeeds with opam Why3 1.7.2 + Alt-Ergo 2.5.4; 5 goals proved |
 | Alloy applied | `usecases/terraform-reachability/` | 3-service stack + SG ingress edges; direct safety UNSAT, transitive surfaces proxy-chain path |
+| Alloy applied | `usecases/wasmplane-route-placement/` | wasmplane route snapshot placement bugs; legacy witnesses SAT, fixed-contract checks UNSAT |
 | P | `languages/p/PingPong/` | two-actor ping-pong + safety monitor; 1000 schedules, 0 bugs |
 | Rocq | `languages/rocq/Rbac.v` | RBAC role-hierarchy monotonicity smoke probe; revisit when a flagship library (CompCert / Iris) becomes load-bearing |
 

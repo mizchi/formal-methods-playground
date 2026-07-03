@@ -10,7 +10,7 @@ on:
       - "justfile"
       - "languages/alloy/**"
       - "scripts/check-alloy.sh"
-      - "usecases/terraform-reachability/**"
+      - "usecases/**"
   workflow_dispatch:
 
 concurrency:

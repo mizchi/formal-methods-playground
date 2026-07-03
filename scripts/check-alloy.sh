@@ -33,3 +33,16 @@ run_expect languages/alloy/workflow-approval.als EveryRequestResolves SAT
 run_expect usecases/terraform-reachability/reachability.als FrontendCannotReachDbDirectly UNSAT
 run_expect usecases/terraform-reachability/reachability.als FrontendNeverTransitivelyReachesDb SAT
 run_expect usecases/terraform-reachability/reachability.als ApiCanReachDb SAT
+
+run_expect usecases/wasmplane-route-placement/route-placement.als LegacyDuplicateDropsIsolation SAT
+run_expect usecases/wasmplane-route-placement/route-placement.als FixedDuplicateCannotDropIsolation UNSAT
+run_expect usecases/wasmplane-route-placement/route-placement.als FixedDuplicateDeliversIsolation SAT
+run_expect usecases/wasmplane-route-placement/route-placement.als LegacyStaticBypassesPlacement SAT
+run_expect usecases/wasmplane-route-placement/route-placement.als FixedStaticCannotReceivePlacedRoute UNSAT
+run_expect usecases/wasmplane-route-placement/route-placement.als FixedStaticFiltered SAT
+run_expect usecases/wasmplane-route-placement/route-placement.als LegacyTtlAllowsMissingHeartbeat SAT
+run_expect usecases/wasmplane-route-placement/route-placement.als FixedTtlRequiresHeartbeat UNSAT
+run_expect usecases/wasmplane-route-placement/route-placement.als FixedFreshHeartbeatCanBeActive SAT
+run_expect usecases/wasmplane-route-placement/route-placement.als LegacyZeroMaxTargetsUsesFailover SAT
+run_expect usecases/wasmplane-route-placement/route-placement.als FixedMaxTargetsZeroInvalid UNSAT
+run_expect usecases/wasmplane-route-placement/route-placement.als FixedPositiveMaxTargetsCanBeValid SAT
