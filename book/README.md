@@ -28,7 +28,8 @@ AI は、コード・docs・テストから候補となる claim を抜き、モ
 4. やりたいことからツールを選ぶ
 5. ツールごとに何が証明・検査できるかを知る
 6. 実例を見て、モデルからドメイン語へ戻す流れを掴む
-7. 言語別チュートリアルとレシピで、実際の書き始め方を確認する
+7. モデルを作った後、仕様・コード・モデルの drift を維持する流れを掴む
+8. 言語別チュートリアルとレシピで、実際の書き始め方を確認する
 
 ## この book の立場
 
@@ -54,5 +55,6 @@ AI は、コード・docs・テストから候補となる claim を抜き、モ
 - [実務導入ガイド](../real-world-adoption.ja.md)
 - [ツール選定ガイド](../verification-tools.md)
 - [ツールの得意不得意マップ](tool-fit-map.md)
+- [モデルを維持する](05-model-maintenance.md)
 - [実験からの findings](../findings.md)
 - [MoonBit prove の能力整理](../languages/moonbit/MOON_PROVE_CAPABILITIES.md)
