@@ -25,6 +25,9 @@
             # SMT-backed program verifier
             dafny
 
+            # Proof-oriented programming language: refinement types + SMT + tactics
+            fstar
+
             # Interactive theorem prover (Rocq, formerly Coq)
             coq
 
@@ -61,6 +64,7 @@
             echo "  alloy6 : (Alloy 6 GUI / CLI; no --version flag)"
             echo "  tlc    : $(tlc 2>&1 | head -1 || echo not-found)"
             echo "  dafny  : $(dafny --version 2>&1 | head -1 || echo not-found)"
+            echo "  fstar  : $(fstar.exe --version 2>&1 | head -1 || echo not-found)"
             echo "  coqc   : $(coqc --version 2>&1 | head -1 || echo not-found)"
             echo "  elan   : $(elan --version 2>&1 | head -1 || echo not-found)"
             echo "  z3     : $(z3 --version 2>&1 | head -1 || echo not-found)"

@@ -41,11 +41,18 @@ ping-pong), the operational picking rule is:
    invariants. Not the right tool for "the system has this
    property over any trace"; that's TLA+ or Alloy. The right
    tool for "this function preserves this contract."
-5. **Lean 4 / Rocq** only when the proof obligation is
+
+5. **F*** for verified implementation cores when the code itself
+   should carry refinement contracts. The `fstar/CheckoutForm.fst`
+   probe is the pattern: constructors require the data needed to
+   prove `is_valid`, and lemmas lock invalid witnesses. Reach for it
+   after the domain property is stable enough to live in executable
+   code.
+6. **Lean 4 / Rocq** only when the proof obligation is
    genuinely *universal* (quantification over an open
    inductive type, not just over a small scope). Most
    application-level work doesn't need this.
-6. **MoonBit `moon prove`** — annotation surface is the
+7. **MoonBit `moon prove`** — annotation surface is the
    cleanest of the SMT-backed tools, translation to Why3 is
    correct, but the prover step is currently blocked on the
    nixpkgs Why3 ↔ Z3/CVC5 generation mismatch. Revisit when
@@ -56,7 +63,7 @@ ping-pong), the operational picking rule is:
 Start in Alloy. Only move when you hit something it can't
 say: fairness → TLA+; codegen-from-spec → P; theorem about
 arbitrary recursive types → Lean; "this function body is
-correct" → Dafny.
+correct" → Dafny; "this shipped core should carry refinement proofs" → F*.
 
 This collapses to ~95% Alloy + occasional escalation for
 fairness-flavoured work, which is itself a small fraction
