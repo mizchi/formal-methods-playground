@@ -39,6 +39,13 @@ _CoqProject.d
 .lia.cache
 .nia.cache
 
+# local opam switch used by MoonBit `moon prove`
+.opam-root/
+_opam/
+
+# MoonBit generated interface files
+*.generated.mbti
+
 # editor
 .vscode/
 .idea/

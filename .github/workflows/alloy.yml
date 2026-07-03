@@ -1,0 +1,35 @@
+name: alloy
+
+on:
+  push:
+  pull_request:
+    paths:
+      - ".github/workflows/alloy.yml"
+      - "flake.lock"
+      - "flake.nix"
+      - "justfile"
+      - "languages/alloy/**"
+      - "scripts/check-alloy.sh"
+      - "usecases/terraform-reachability/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  alloy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check Alloy probes
+        run: nix develop -c just check-alloy

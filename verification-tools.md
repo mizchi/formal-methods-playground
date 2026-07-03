@@ -5,6 +5,10 @@ and SMT-backed verifiers. Written from the perspective of someone
 who has a specific property they want to express and check, not
 someone shopping for a research career.
 
+For the adoption view — what manual engineering activity each tool
+can replace, and what each language can prove — see
+[`real-world-adoption.md`](real-world-adoption.md).
+
 The headline takeaway is that **these are not interchangeable
 tools — they answer different questions**. The first job is to
 classify your problem along three axes, then the tool falls out.
@@ -17,57 +21,69 @@ After writing one or more probes per tool against
 application-level specs (RBAC, multi-tenant isolation,
 expense-approval workflow, terraform reachability, async
 order checkout, event-sourced ledger, actor-model
-ping-pong), the operational picking rule is:
+ping-pong, implementation-extracted checkout predicates), the
+operational picking rule is:
 
-1. **Default: Alloy 6.** Structural, relational, finite-scope
+1. **If the implementation already exposes a pure predicate,
+   start with Z3.** Eligibility checks, config validators,
+   branch guards, wire-value compatibility, and old-vs-new
+   equivalence checks can be mirrored almost directly. The
+   `languages/z3/checkout_form.smt2` probe is the pattern: assert that
+   bad inputs exist, expect `unsat`; include a broken variant,
+   expect `sat`.
+2. **Default for structural specs: Alloy 6.** Structural, relational, finite-scope
    bug-hunting fits the vast majority of application-level
    spec questions — RBAC, screen navigation, ownership,
    multi-tenancy, reachability over a graph, workflow
    state-machine safety. The surface reads like the design
    doc; counter-examples are concrete instances; setup cost
    is one nix package.
-2. **Escalate to TLA+** when *fairness* or *liveness* enters
+3. **Escalate to TLA+** when *fairness* or *liveness* enters
    the vocabulary. Eventual consistency, retry semantics,
    "this message is eventually delivered," "this state is
    eventually resolved" — Alloy 6 has temporal operators but
    no fairness primitives. TLA+ does.
-3. **P** for actor-shaped *production* code where the spec
+4. **P** for actor-shaped *production* code where the spec
    ↔ implementation alignment matters enough to spend on
    codegen. Setup is the heaviest (.NET SDK + `DOTNET_ROOT`
    plumbing + per-user `dotnet tool install`), but the
    spec-becomes-impl pitch is unique among the tools tried.
-4. **Dafny** for code-level reasoning — sequential algorithm
+5. **Dafny** for code-level reasoning — sequential algorithm
    correctness, conditional invariants on records, loop
    invariants. Not the right tool for "the system has this
    property over any trace"; that's TLA+ or Alloy. The right
    tool for "this function preserves this contract."
-
-5. **F*** for verified implementation cores when the code itself
-   should carry refinement contracts. The `fstar/CheckoutForm.fst`
+6. **F*** for verified implementation cores when the code itself
+   should carry refinement contracts. The `languages/fstar/CheckoutForm.fst`
    probe is the pattern: constructors require the data needed to
    prove `is_valid`, and lemmas lock invalid witnesses. Reach for it
    after the domain property is stable enough to live in executable
    code.
-6. **Lean 4 / Rocq** only when the proof obligation is
+7. **Lean 4 / Rocq** only when the proof obligation is
    genuinely *universal* (quantification over an open
    inductive type, not just over a small scope). Most
    application-level work doesn't need this.
-7. **MoonBit `moon prove`** — annotation surface is the
-   cleanest of the SMT-backed tools, translation to Why3 is
-   correct, but the prover step is currently blocked on the
-   nixpkgs Why3 ↔ Z3/CVC5 generation mismatch. Revisit when
-   nixpkgs upgrades Why3 to 1.9+.
+8. **MoonBit `moon prove`** — annotation surface is the
+   cleanest of the SMT-backed tools. Use the repository-local
+   opam path (`just setup-moonbit-prove-opam`, then
+   `just prove-moonbit`) to pin Why3 1.7.2 + Alt-Ergo 2.5.4;
+   nixpkgs Why3 1.8.2 currently hits prover-version mismatch.
+   See [`languages/moonbit/MOON_PROVE_CAPABILITIES.md`](languages/moonbit/MOON_PROVE_CAPABILITIES.md)
+   for the inventory distilled from `moonbit-community/verified`.
 
 ### Picking-rule one-liner
 
-Start in Alloy. Only move when you hit something it can't
-say: fairness → TLA+; codegen-from-spec → P; theorem about
-arbitrary recursive types → Lean; "this function body is
-correct" → Dafny; "this shipped core should carry refinement proofs" → F*.
+Start with Z3 when you already have a pure implementation
+predicate. Otherwise start in Alloy. Only move when you hit
+something it can't say: fairness → TLA+; codegen-from-spec → P;
+theorem about arbitrary recursive types → Lean; "this function
+body is correct" → Dafny / MoonBit prove; "this shipped core should
+carry refinement proofs" → F*.
 
-This collapses to ~95% Alloy + occasional escalation for
-fairness-flavoured work, which is itself a small fraction
-of application-level specs.
+This collapses to direct Z3 for implementation predicates,
+Alloy for structural specs, and occasional escalation for
+fairness-flavoured work, which is itself a small fraction of
+application-level specs.
 
 ### What I'd write next
 

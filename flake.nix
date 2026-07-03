@@ -15,7 +15,7 @@
         };
       in {
         devShells.default = pkgs.mkShell {
-          packages = with pkgs; [
+          packages = (with pkgs; [
             # Model finder (Alloy 6 has the temporal extension)
             alloy6
 
@@ -38,6 +38,18 @@
             z3
             cvc5
 
+            # Shared task runner for local and CI-style checks
+            just
+
+            # Mermaid diagram renderer / syntax checker for GitBook docs
+            mermaid-cli
+
+            # OCaml package manager; useful for MoonBit's Why3 1.7.x workaround.
+            opam
+            pkg-config
+            gmp
+            zlib
+
             # Why3 — backend for MoonBit's `moon prove`
             why3
             alt-ergo
@@ -46,9 +58,16 @@
             # P itself is installed via `dotnet tool install --global P`
             # on first entry; the shellHook handles it idempotently.
             dotnet-sdk_8
+          ]) ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+            # Browser used by mermaid-cli / Puppeteer in CI.
+            pkgs.chromium
           ];
 
           shellHook = ''
+            ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+            export PUPPETEER_EXECUTABLE_PATH=${pkgs.chromium}/bin/chromium
+            ''}
+
             # MoonBit toolchain is host-installed (~/.moon/bin), not
             # packaged in nixpkgs. Make `moon` / `moonc` visible here.
             export PATH="$HOME/.moon/bin:$PATH"
@@ -60,7 +79,7 @@
             export DOTNET_ROOT=${pkgs.dotnet-sdk_8}/share/dotnet
             export DOTNET_CLI_TELEMETRY_OPTOUT=1
 
-            echo "prove-playground devShell"
+            echo "formal-methods-playground devShell"
             echo "  alloy6 : (Alloy 6 GUI / CLI; no --version flag)"
             echo "  tlc    : $(tlc 2>&1 | head -1 || echo not-found)"
             echo "  dafny  : $(dafny --version 2>&1 | head -1 || echo not-found)"
@@ -69,6 +88,9 @@
             echo "  elan   : $(elan --version 2>&1 | head -1 || echo not-found)"
             echo "  z3     : $(z3 --version 2>&1 | head -1 || echo not-found)"
             echo "  cvc5   : $(cvc5 --version 2>&1 | head -1 || echo not-found)"
+            echo "  just   : $(just --version 2>&1 | head -1 || echo not-found)"
+            echo "  mmdc   : $(mmdc --version 2>&1 | head -1 || echo not-found)"
+            echo "  opam   : $(opam --version 2>&1 | head -1 || echo not-found)"
             echo "  why3   : $(why3 --version 2>&1 | head -1 || echo not-found)"
             echo "  moon   : $(moon version 2>&1 | head -1 || echo not-installed)"
             echo "  dotnet : $(dotnet --version 2>&1 | head -1 || echo not-found)"

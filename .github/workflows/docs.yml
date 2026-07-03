@@ -1,0 +1,39 @@
+name: docs
+
+on:
+  push:
+  pull_request:
+    paths:
+      - ".github/workflows/docs.yml"
+      - "README.md"
+      - "book/**"
+      - "findings.md"
+      - "flake.lock"
+      - "flake.nix"
+      - "justfile"
+      - "real-world-adoption.ja.md"
+      - "real-world-adoption.md"
+      - "scripts/check-mermaid.sh"
+      - "verification-tools.md"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  mermaid:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check Mermaid diagrams
+        run: nix develop -c just check-mermaid

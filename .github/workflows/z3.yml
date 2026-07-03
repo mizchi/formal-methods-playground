@@ -1,0 +1,33 @@
+name: z3
+
+on:
+  push:
+  pull_request:
+    paths:
+      - ".github/workflows/z3.yml"
+      - "flake.lock"
+      - "flake.nix"
+      - "justfile"
+      - "languages/z3/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  z3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check Z3 probes
+        run: nix develop -c just check-z3

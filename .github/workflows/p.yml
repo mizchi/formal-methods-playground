@@ -1,0 +1,38 @@
+name: p
+
+on:
+  push:
+  pull_request:
+    paths:
+      - ".github/workflows/p.yml"
+      - "flake.lock"
+      - "flake.nix"
+      - "justfile"
+      - "languages/p/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install P tool
+        run: |
+          nix develop -c dotnet tool update --global P || nix develop -c dotnet tool install --global P
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Check P probes
+        run: nix develop -c just check-p

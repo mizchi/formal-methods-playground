@@ -7,10 +7,75 @@ The probes are all in the repo:
 
 | Tool | Probe | What it expresses |
 | --- | --- | --- |
-| Alloy 6 | `alloy/app-rbac.als` | RBAC + screen-navigation safety + sanity |
-| TLA+ | `tla/OrderCheckout.tla` | async order state machine + safety + liveness |
-| Dafny | `dafny/checkout_form.dfy` | conditional form invariants + loop verification |
-| Lean 4 | `lean/Rbac.lean` | role-hierarchy monotonicity, universal proof |
+| Z3 | `languages/z3/checkout_form.smt2` | implementation-extracted checkout predicate + broken-variant witness |
+| Alloy 6 | `languages/alloy/app-rbac.als` | RBAC + screen-navigation safety + sanity |
+| TLA+ | `languages/tla/OrderCheckout.tla` | async order state machine + safety + liveness |
+| Dafny | `languages/dafny/checkout_form.dfy` | conditional form invariants + loop verification |
+| Lean 4 | `languages/lean/Rbac.lean` | role-hierarchy monotonicity, universal proof |
+
+---
+
+## Z3 — implementation-extracted checkout predicate
+
+### What it expresses well
+
+The MoonBit implementation exposes a pure decision function:
+
+```text
+valid =
+  total > 0
+  && (
+       kind == physical_kind && has_shipping
+       || kind == digital_kind && email_len > 0
+     )
+```
+
+Z3 is the shortest path from that function to concrete
+"does this bad input exist?" questions. The probe asks whether
+an unknown kind can validate and whether a digital order with
+`email_len <= 0` can validate; both are `unsat`.
+
+It also carries a broken variant that forgets the digital email
+guard. Against that variant the same class of bad input becomes
+`sat`, so the harness is load-bearing rather than merely green.
+
+### What I tripped on
+
+SMT-LIB's `check-sat` output does not make the process fail when
+the answer is unexpected. The wrapper script
+`languages/z3/check_checkout_form.sh` compares the full expected answer
+sequence:
+
+```text
+unsat
+unsat
+sat
+sat
+sat
+```
+
+That gives a human-readable trace and a CI-usable exit code.
+
+### Surface readability score
+
+**7 / 10** for tiny predicates, **4 / 10** once the domain stops
+being simple integers and booleans. The model is honest and
+direct, but the domain vocabulary is thinner than Alloy or Dafny.
+
+### Counter-example quality
+
+By default the current probe only prints `sat` / `unsat` because
+the wrapper wants a stable output contract. Add `get-model` when
+debugging a specific failure; keep it out of the CI path unless
+the expected model is intentionally pinned.
+
+### When to reach for it again
+
+Pure, data-shaped predicates extracted from implementation:
+feature flags, eligibility, config validation, branch coverage,
+wire-value compatibility, and old-vs-new equivalence checks.
+If the question involves state transitions over time, move to
+TLA+; if it is mostly relations over entities, Alloy reads better.
 
 ---
 
@@ -37,8 +102,8 @@ No bookkeeping, no manual encoding of the transition system —
 
 `alloy6 exec` (Nix package name; the doc-traditional spelling is
 `alloy execute`). On second run, the per-command output dir
-(`alloy/app-rbac/`) already existed and the CLI refused to
-overwrite without `-f`. Easy fix; documented in `alloy/README.md`.
+(`languages/alloy/app-rbac/`) already existed and the CLI refused to
+overwrite without `-f`. Easy fix; documented in `languages/alloy/README.md`.
 
 ### Surface readability score
 
@@ -240,7 +305,7 @@ Alloy job. The two are not interchangeable.
 
 ## TLA+ — EventSourcing replay determinism + snapshot consistency
 
-`tla/EventSourcing.tla` — a payment ledger whose state (`balance`)
+`languages/tla/EventSourcing.tla` — a payment ledger whose state (`balance`)
 is derived from an append-only `log` of Deposit / Withdraw
 events. The probe verifies the four invariants that any
 event-sourcing implementation has to satisfy regardless of
@@ -284,7 +349,7 @@ event-sourcing direction matters for the actual project.
 
 ## Alloy — multi-tenant data isolation
 
-`alloy/multi-tenant.als` — sig hierarchy of `User × Tenant ×
+`languages/alloy/multi-tenant.als` — sig hierarchy of `User × Tenant ×
 Document × Role`. The integrity claim is that a Regular user
 never reads a Document outside their own Tenant. Surface:
 
@@ -318,7 +383,7 @@ deviation.
 
 ## Alloy — workflow-approval state machine (temporal)
 
-`alloy/workflow-approval.als` uses Alloy 6's `var` + `always`
+`languages/alloy/workflow-approval.als` uses Alloy 6's `var` + `always`
 + prime notation to express an expense-approval flow:
 
 ```
@@ -391,7 +456,7 @@ shapes of probe in the repo.
 
 ## P — sister probe of TLA+'s ActorMailbox
 
-`p/PingPong/` re-expresses the actor-model problem in
+`languages/p/PingPong/` re-expresses the actor-model problem in
 Microsoft's P language. Same domain (Sender + Receiver
 exchanging messages), but where the TLA+ version had to
 hand-model a mailbox as `Seq` and check FIFO via a prefix
@@ -469,7 +534,7 @@ message handler, which warps the model.
 
 ## TLA+ — Actor Model mailbox: bounded + FIFO + eventual delivery
 
-`tla/ActorMailbox.tla` — two actors send each other typed
+`languages/tla/ActorMailbox.tla` — two actors send each other typed
 messages through per-actor mailboxes. The probe verifies:
 
   - `BoundedMailbox` (safety) — no mailbox exceeds
@@ -521,10 +586,10 @@ rather than via state-constraint trimming.
 
 ## Dafny — same RBAC + screen-nav domain as the Alloy probe
 
-A second Dafny probe in `dafny/rbac_screens.dfy` re-expresses the
+A second Dafny probe in `languages/dafny/rbac_screens.dfy` re-expresses the
 Alloy probe's domain (Role × Screen × authorisation table ×
 adjacency graph) using Dafny's class-based state-machine
-encoding. Direct side-by-side comparison with `alloy/app-rbac.als`.
+encoding. Direct side-by-side comparison with `languages/alloy/app-rbac.als`.
 
 ### What Dafny adds over Alloy here
 
@@ -592,7 +657,7 @@ already exists.
 
 ## MoonBit `moon prove` — checkout-form-shape probe
 
-### What it expresses well (in principle)
+### What it expresses well
 
 The annotation surface is Dafny-shaped — `where { proof_require:
 ..., proof_ensure: result => ... }` on the function signature.
@@ -601,13 +666,20 @@ reads cleanly. Translation to Why3 (`.mlw`) produces faithful
 output: `requires { ... }` / `ensures { ... }` clauses + an
 imperative `let ... = if ... then ... else ...` body.
 
+With the repository-local opam switch, `moon prove` now discharges
+the checkout package:
+
+```text
+Succeeded: 5 goals proved
+```
+
 ### What I tripped on
 
 1. **Per-package activation gate.** Without `options(
    "proof-enabled": true )` in `moon.pkg`, `moon prove` silently
    exits 0 without doing anything. No diagnostic. This swallowed
    30 minutes of "is it actually checking" debugging — addressed
-   in moonbit/README.md as the lead caveat.
+   in languages/moonbit/README.md as the lead caveat.
 2. **`@int.MIN_VALUE` not expressible in proof annotations.** The
    logic-side language is a subset of MoonBit; standard-library
    constants are not all reachable. Worked around with a literal
@@ -616,8 +688,14 @@ imperative `let ... = if ... then ... else ...` body.
    does not recognise Z3 4.16.0, CVC5 1.3.3, or Alt-Ergo 2.6.3
    (also nixpkgs latest). All three are dropped from moon's
    prover-harness pool with "no configured provers are
-   available." The MoonBit → Why3 translation works; the
-   Why3 → SMT step does not.
+   available." The adopted fix is to use Nix for `opam`, then
+   pin Why3 1.7.2 + Alt-Ergo 2.5.4 in `.opam-root/`.
+4. **Boolean equivalence shape matters.** The original checkout
+   contract used an inline `&&` / `||` formula while the MoonBit
+   body lowered to nested `if`s. That produced 4 proved goals and
+   1 timeout. Moving the decision into a `#proof_pure` helper and
+   specifying `result == checkout_spec(...)` made the proof
+   straightforward.
 
 ### Surface readability score
 
@@ -628,23 +706,27 @@ script DSL) is a real win for review.
 
 ### Counter-example quality
 
-Not exercised — the toolchain version gap prevents the SMT
-solvers from ever running. The translation IR (Why3 .mlw) is
-inspectable in `_build/verif/<pkg>.mlw` and is what you would
-debug against if proofs failed.
+Now exercised. Successful proofs report package-level goal counts;
+failed proofs produce `_build/verif/checkout_form.proof.json` with
+the Why3 goal, local context, and per-prover result. The useful
+debug path is:
+
+1. inspect `_build/verif/<pkg>.mlw`
+2. inspect `_build/verif/*.proof.json`
+3. simplify the contract shape before adding more proof hints
 
 ### When to reach for it again
 
-**Today**: only if the version pinning headache is paid up-front
-(matching nixpkgs derivations of Z3 / CVC5 / Alt-Ergo to a
-Why3-recognised version window). Dafny is friction-free where
-MoonBit's pipeline is sensitive — Dafny ships its SMT bundle
-inline so there is no version-recognition step.
+When you can pay the one-time setup cost:
 
-**Soon (next nixpkgs unstable bump of Why3 to 1.9+)**: probably
-just works, at which point MoonBit's compelling pitch — proof
+```sh
+nix develop -c just setup-moonbit-prove-opam
+nix develop -c just prove-moonbit
+```
+
+After that, MoonBit's compelling pitch is operational: proof
 annotations directly on the production language, no separate
-proof script, full Why3 IR visibility — becomes operational.
+proof script, full Why3 IR visibility.
 
 ### Architectural note
 
