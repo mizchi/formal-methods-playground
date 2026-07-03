@@ -40,6 +40,7 @@
 
             # Shared task runner for local and CI-style checks
             just
+            zsh
 
             # Mermaid diagram renderer / syntax checker for GitBook docs
             mermaid-cli
