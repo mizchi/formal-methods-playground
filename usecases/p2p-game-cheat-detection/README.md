@@ -75,7 +75,7 @@ MoonBit:
 - [`languages/moonbit/p2p_game_protocol/p2p_game_protocol.mbt`](../../languages/moonbit/p2p_game_protocol/p2p_game_protocol.mbt)
 - [`languages/moonbit/p2p_game_protocol/p2p_game_protocol_test.mbt`](../../languages/moonbit/p2p_game_protocol/p2p_game_protocol_test.mbt)
 
-The executable verifier returns one of four verdicts:
+The executable verifier returns one of five verdicts:
 
 | Verdict | Meaning |
 | --- | --- |
@@ -83,6 +83,26 @@ The executable verifier returns one of four verdicts:
 | `verdict_bad_commit` | revealed input does not match commitment |
 | `verdict_invalid_input` | input is not valid under game rules |
 | `verdict_hash_mismatch` | peer state hash does not match deterministic replay |
+| `verdict_incomplete` | one or more commit/reveal/hash fields are missing |
+
+The MoonBit implementation has two layers:
+
+- `verify_tick(...)`: the small proof-friendly decision function.
+- `TickTranscript`: the application-facing protocol API that records
+  commit/reveal/hash packets and then calls `verify_transcript()`.
+
+Formalization-to-implementation mapping:
+
+| TLA+ model | MoonBit implementation | Purpose |
+| --- | --- | --- |
+| `None` | `missing_value()` | missing packet marker |
+| `CommitOf(input)` | `make_commit(input)` | commitment calculation |
+| `ValidInput(input)` | `is_valid_input(input)` | game rule validator |
+| `StateHashOf(reveals)` | `expected_state_hash(p1, p2)` | deterministic replay hash |
+| `Commit(p, c)` | `TickTranscript::commit_p1/commit_p2` | record commit packet |
+| `Reveal(p, input)` | `TickTranscript::reveal_p1/reveal_p2` | record reveal packet |
+| `SendHash(p, h)` | `TickTranscript::state_hash_p1/state_hash_p2` | record state-hash packet |
+| `CheckReveals` / `CheckHashes` | `TickTranscript::verify_transcript()` | produce verdict |
 
 Run:
 
@@ -92,8 +112,10 @@ nix develop -c just prove-moonbit
 ```
 
 The MoonBit proof layer checks that `verify_tick` is exactly the executable
-version of the proof-only `tick_spec`; tests cover honest accept, commit/reveal
-mismatch, speedhack input, and state-hash equivocation.
+version of the proof-only `tick_spec`, and that `verify_transcript` is exactly
+the executable version of `transcript_spec`. Tests cover honest accept,
+commit/reveal mismatch, speedhack input, state-hash equivocation, and incomplete
+ticks.
 
 ## Domain ledger
 
@@ -115,7 +137,8 @@ tool:
 
 machine result:
   TLC found no invariant or liveness violation in the modeled scope.
-  MoonBit prove discharged the `verify_tick == tick_spec` obligations.
+  MoonBit prove discharged the `verify_tick == tick_spec` and
+  `verify_transcript == transcript_spec` obligations.
 
 domain wording:
   A peer cannot get a tick accepted by revealing a different input than it
@@ -123,8 +146,8 @@ domain wording:
   that does not match deterministic replay.
 
 domain question:
-  Are these four verdicts enough for product behavior, or does dispute handling
-  need more detailed reasons such as "late reveal" and "missing hash"?
+  Are these verdicts enough for product behavior, or does dispute handling need
+  more detailed reasons such as "late reveal" and "missing hash"?
 
 lock:
   `nix develop -c just check-tla`
