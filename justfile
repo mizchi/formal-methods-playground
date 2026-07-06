@@ -24,6 +24,7 @@ tool-versions:
 
 test-moonbit:
   cd languages/moonbit/checkout_form && moon test
+  cd languages/moonbit/p2p_game_protocol && moon test
 
 setup-moonbit-prove-opam:
   ./scripts/setup-moonbit-prove-opam.sh

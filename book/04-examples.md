@@ -64,6 +64,9 @@ Alloy が返すもの:
 ```text
 API -> DB -> outbox -> queue -> worker のどこで crash しても、
 二重処理や lost update が起きないか?
+
+P2P game の tick protocol で、commit/reveal/state hash が揃わない入力を
+accepted にしていないか?
 ```
 
 repo 内の例:
@@ -71,6 +74,8 @@ repo 内の例:
 - [`languages/tla/OrderCheckout.tla`](../languages/tla/OrderCheckout.tla)
 - [`languages/tla/EventSourcing.tla`](../languages/tla/EventSourcing.tla)
 - [`languages/tla/ActorMailbox.tla`](../languages/tla/ActorMailbox.tla)
+- [`languages/tla/P2PGameProtocol.tla`](../languages/tla/P2PGameProtocol.tla)
+- [`usecases/p2p-game-cheat-detection/`](../usecases/p2p-game-cheat-detection/)
 
 TLA+ が返すもの:
 
@@ -111,6 +116,7 @@ repo 内の例:
 - [`languages/dafny/checkout_form.dfy`](../languages/dafny/checkout_form.dfy)
 - [`languages/dafny/rbac_screens.dfy`](../languages/dafny/rbac_screens.dfy)
 - [`languages/moonbit/checkout_form/`](../languages/moonbit/checkout_form/)
+- [`languages/moonbit/p2p_game_protocol/`](../languages/moonbit/p2p_game_protocol/)
 - [`languages/moonbit/MOON_PROVE_CAPABILITIES.md`](../languages/moonbit/MOON_PROVE_CAPABILITIES.md)
 
 返ってくるもの:

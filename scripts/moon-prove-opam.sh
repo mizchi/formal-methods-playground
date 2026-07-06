@@ -20,5 +20,7 @@ eval "$(opam env --switch="$switch_name" --set-switch)"
 why3 --version
 alt-ergo --version
 
-cd "$repo_root/languages/moonbit/checkout_form"
-moon prove
+for pkg in checkout_form p2p_game_protocol; do
+  echo "== moon prove: $pkg"
+  (cd "$repo_root/languages/moonbit/$pkg" && moon prove)
+done

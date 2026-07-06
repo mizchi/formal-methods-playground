@@ -10,3 +10,4 @@ run_tlc() {
 run_tlc OrderCheckout
 run_tlc EventSourcing
 run_tlc ActorMailbox
+run_tlc P2PGameProtocol
