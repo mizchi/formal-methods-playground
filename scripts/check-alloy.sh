@@ -34,6 +34,17 @@ run_expect usecases/terraform-reachability/reachability.als FrontendCannotReachD
 run_expect usecases/terraform-reachability/reachability.als FrontendNeverTransitivelyReachesDb SAT
 run_expect usecases/terraform-reachability/reachability.als ApiCanReachDb SAT
 
+run_expect usecases/cloud-config-verification/connectivity.als InternetCanReachAlb SAT
+run_expect usecases/cloud-config-verification/connectivity.als ApiCanReachDb SAT
+run_expect usecases/cloud-config-verification/connectivity.als NoInternetDirectToDb UNSAT
+run_expect usecases/cloud-config-verification/connectivity.als InternetNeverAffectsDb SAT
+run_expect usecases/cloud-config-verification/connectivity.als InternetCannotReachWorker UNSAT
+run_expect usecases/cloud-config-verification/cloudflare-workers-bindings.als ProdApiCanReachProdD1 SAT
+run_expect usecases/cloud-config-verification/cloudflare-workers-bindings.als PublicApiCanReachAuthService SAT
+run_expect usecases/cloud-config-verification/cloudflare-workers-bindings.als StaticAssetsCannotReachDataBindings UNSAT
+run_expect usecases/cloud-config-verification/cloudflare-workers-bindings.als PublicEntryWorkerCannotBindSecretDirectly UNSAT
+run_expect usecases/cloud-config-verification/cloudflare-workers-bindings.als PreviewNeverUsesProductionData SAT
+
 run_expect usecases/wasmplane-route-placement/route-placement.als LegacyDuplicateDropsIsolation SAT
 run_expect usecases/wasmplane-route-placement/route-placement.als FixedDuplicateCannotDropIsolation UNSAT
 run_expect usecases/wasmplane-route-placement/route-placement.als FixedDuplicateDeliversIsolation SAT

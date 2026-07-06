@@ -44,12 +44,14 @@ Z3 query:
 ```text
 user が所属していない tenant の resource を読める経路はあるか?
 non-admin が settings に到達できる screen transition はあるか?
+Cloudflare Workers の public route から production D1 / secrets に到達できるか?
 ```
 
 repo 内の例:
 
 - [`languages/alloy/app-rbac.als`](../languages/alloy/app-rbac.als)
 - [`languages/alloy/multi-tenant.als`](../languages/alloy/multi-tenant.als)
+- [`usecases/cloud-config-verification/cloudflare-workers-bindings.als`](../usecases/cloud-config-verification/cloudflare-workers-bindings.als)
 
 Alloy が返すもの:
 
@@ -67,6 +69,9 @@ API -> DB -> outbox -> queue -> worker のどこで crash しても、
 
 P2P game の tick protocol で、commit/reveal/state hash が揃わない入力を
 accepted にしていないか?
+
+クラウドの rollout で、new target が健康かつ DB 互換になる前に
+traffic が切り替わらないか?
 ```
 
 repo 内の例:
@@ -75,7 +80,9 @@ repo 内の例:
 - [`languages/tla/EventSourcing.tla`](../languages/tla/EventSourcing.tla)
 - [`languages/tla/ActorMailbox.tla`](../languages/tla/ActorMailbox.tla)
 - [`languages/tla/P2PGameProtocol.tla`](../languages/tla/P2PGameProtocol.tla)
+- [`languages/tla/CloudRollout.tla`](../languages/tla/CloudRollout.tla)
 - [`usecases/p2p-game-cheat-detection/`](../usecases/p2p-game-cheat-detection/)
+- [`usecases/cloud-config-verification/`](../usecases/cloud-config-verification/)
 
 TLA+ が返すもの:
 
