@@ -164,6 +164,19 @@ the `.cfg`. Real concurrency specs (servers, protocols) rarely
 deadlock by design, so this is a probe-specific quirk; document
 it in the config rather than mutate the spec.
 
+The subtler trap is **fairness**. `WF_vars(Next)` reads like
+"the machine keeps making progress", but for a liveness property
+it is usually too weak *and* too easy to satisfy for the wrong
+reason: some unrelated action stays enabled and keeps firing, so
+the eventually-property "holds" without the exit action ever
+running. The fix is per-action weak fairness — `WF_vars(Deliver)`
+on the specific action you need to eventually fire — not a
+blanket `WF_vars(Next)`. Always re-confirm by breaking it: a
+liveness config that still shows "No error" after you delete the
+action's fairness was never really checking the property. (This
+is the fairness gotcha in the
+[extraction playbook](extraction-playbook.md).)
+
 ### Surface readability score
 
 **6 / 10**. The ASCII math (`/\` `\/` `\E` `~>` `[]` `<>`) is

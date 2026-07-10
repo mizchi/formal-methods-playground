@@ -36,6 +36,14 @@ tools replace in normal engineering work, which tool to adopt by
 purpose, and what each language can prove. Japanese version:
 [`real-world-adoption.ja.md`](real-world-adoption.ja.md).
 
+[`extraction-playbook.md`](extraction-playbook.md) — the other
+axis: pointing these tools at an **existing codebase** instead of a
+synthetic probe. Where a checkable claim hides in real code, how to
+anchor a model to its source, and the model→executable-repro
+credibility ladder that makes a finding believable. Read this when
+the question is "there is a real program — what do I model, and how
+do I trust the result".
+
 GitBook draft outline: [`book/README.md`](book/README.md) and
 [`book/SUMMARY.md`](book/SUMMARY.md).
 
@@ -48,9 +56,14 @@ should have a top-of-file comment block with:
 1. What property is being verified.
 2. What tool command runs it.
 3. What pass / fail looks like.
-4. (Optional) A breaking variant — "weaken X and re-run, expect
+4. A breaking variant — "weaken X and re-run, expect
    counter-example Y" — so the verifier's discrimination power
-   is testable from the file itself.
+   is testable from the file itself. A probe that only ever
+   shows green has not earned trust; the witness side is what
+   proves the check still discriminates. (This is the
+   dual-check discipline of the
+   [extraction playbook](extraction-playbook.md); required for
+   extracted models, expected for synthetic probes too.)
 
 ## Status
 
