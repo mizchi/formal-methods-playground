@@ -12,3 +12,4 @@ run_tlc EventSourcing
 run_tlc ActorMailbox
 run_tlc P2PGameProtocol
 run_tlc CloudRollout
+run_tlc RateLimitRace
