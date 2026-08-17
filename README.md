@@ -24,6 +24,10 @@ counter-example style, and effort cost become concrete.
 | [`languages/moonbit/`](languages/moonbit/) | MoonBit `moon prove` | Dafny-style annotations → Why3 → SMT |
 | [`usecases/terraform-reachability/`](usecases/terraform-reachability/) | Alloy applied | microservice reachability graph from terraform SGs |
 | [`usecases/wasmplane-route-placement/`](usecases/wasmplane-route-placement/) | Alloy applied | route snapshot placement bug witnesses and fixed-contract checks |
+| [`usecases/offline-sync-convergence/`](usecases/offline-sync-convergence/) | Alloy applied | offline-first LWW merge: strong eventual consistency and its clock assumption |
+| [`usecases/idempotency-key/`](usecases/idempotency-key/) | TLA+ applied | at-least-once retry: no double side effect, and no wedged key |
+| [`usecases/write-skew-seat-limit/`](usecases/write-skew-seat-limit/) | TLA+ applied | write skew on a seat limit under snapshot isolation |
+| [`usecases/schema-evolution/`](usecases/schema-evolution/) | Z3 applied | rolling-deploy compatibility in both directions |
 | [`languages/p/`](languages/p/) | P language | actor-model state machines with built-in checker |
 
 ## Tool selection guide
@@ -66,6 +70,13 @@ anchor a model to its source, and the model→executable-repro
 credibility ladder that makes a finding believable. Read this when
 the question is "there is a real program — what do I model, and how
 do I trust the result".
+
+[`book/06-timing.md`](book/06-timing.md) — the third axis. The
+bug-pattern catalog says *what* can be checked and the tool-fit map says
+*which tool*; this chapter says **when** — design, editor, PR gate,
+migration, rollout, runtime, postmortem — with the pattern x timing
+matrix and the arXiv evidence behind each slot. Read this when the
+question is "we know this is checkable, but is now the moment".
 
 GitBook draft outline: [`book/README.md`](book/README.md) and
 [`book/SUMMARY.md`](book/SUMMARY.md).
@@ -112,6 +123,10 @@ should have a top-of-file comment block with:
 | Alloy applied | `usecases/terraform-reachability/` | 3-service stack + SG ingress edges; direct safety UNSAT, transitive surfaces proxy-chain path |
 | Alloy applied | `usecases/wasmplane-route-placement/` | wasmplane route snapshot placement bugs; legacy witnesses SAT, fixed-contract checks UNSAT |
 | P | `languages/p/PingPong/` | two-actor ping-pong + safety monitor; 1000 schedules, 0 bugs |
+| TLA+ applied | `usecases/idempotency-key/` | idempotency keys under retry; correct design green (16 states, depth 8), late-store witness `charges = 2`, blocking witness wedges at `reserved` |
+| TLA+ applied | `usecases/write-skew-seat-limit/` | seat limit under SI/SSI/row lock; SERIALIZABLE and FOR UPDATE green, snapshot isolation witnesses `members = 2` on a 1-seat plan |
+| Alloy applied | `usecases/offline-sync-convergence/` | LWW merge convergence; 4 checks UNSAT, 4 witnesses SAT (naive tie, no unique winner, repeated stamp, non-vacuity) |
+| Z3 applied | `usecases/schema-evolution/` | rolling-deploy compatibility both directions; `sat, sat, unsat, unsat, sat, unsat` |
 
 See [`findings.md`](findings.md) for the comparative
 notes — surface readability, counter-example quality, and the

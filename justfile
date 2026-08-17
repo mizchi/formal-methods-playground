@@ -42,6 +42,7 @@ check-z3:
     ./languages/z3/check_trust_boundary.sh
     ./languages/z3/check_rate_limit_subsumption.sh
     ./languages/z3/check_wire_contract.sh
+    ./languages/z3/check_schema_evolution.sh
 
 check-alloy:
     ./scripts/check-alloy.sh

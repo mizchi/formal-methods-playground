@@ -57,3 +57,12 @@ run_expect usecases/wasmplane-route-placement/route-placement.als FixedFreshHear
 run_expect usecases/wasmplane-route-placement/route-placement.als LegacyZeroMaxTargetsUsesFailover SAT
 run_expect usecases/wasmplane-route-placement/route-placement.als FixedMaxTargetsZeroInvalid UNSAT
 run_expect usecases/wasmplane-route-placement/route-placement.als FixedPositiveMaxTargetsCanBeValid SAT
+
+run_expect usecases/offline-sync-convergence/lww-merge.als TiebreakIsCommutative UNSAT
+run_expect usecases/offline-sync-convergence/lww-merge.als TiebreakIsAssociative UNSAT
+run_expect usecases/offline-sync-convergence/lww-merge.als EveryReplicaConverges UNSAT
+run_expect usecases/offline-sync-convergence/lww-merge.als SameUpdatesSameState UNSAT
+run_expect usecases/offline-sync-convergence/lww-merge.als NaiveTieDiverges SAT
+run_expect usecases/offline-sync-convergence/lww-merge.als NaiveReplicaHasNoUniqueWinner SAT
+run_expect usecases/offline-sync-convergence/lww-merge.als RepeatedStampBreaksTiebreak SAT
+run_expect usecases/offline-sync-convergence/lww-merge.als ConcurrentEditsExist SAT

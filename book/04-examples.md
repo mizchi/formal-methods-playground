@@ -1,4 +1,4 @@
-# 6. 実例
+# 7. 実例
 
 この章は、実装から仕様を吸い出し、モデルに落とし、最後に
 ドメイン語へ戻す具体例を置く。
@@ -37,6 +37,27 @@ Z3 query:
 これは意図した API 契約か?
 ```
 
+## Z3: schema evolution
+
+実装に近い問い:
+
+```text
+rolling deploy 中に、新 pod が書いたレコードを旧 pod は受け取れるか?
+旧 pod が書いたレコードを新 pod は受け取れるか?
+受け取れたとして、旧 pod はそれを正しく扱うか?
+```
+
+repo 内の例:
+
+- [`languages/z3/schema_evolution.smt2`](../languages/z3/schema_evolution.smt2)
+- [`usecases/schema-evolution/`](../usecases/schema-evolution/)
+
+Z3 が返すもの:
+
+- 両方向それぞれの reject witness
+- tolerant reader にしたときの `unsat`（互換が閉じたことの確認）
+- パースは通るが誤った動作に至る witness（fail-open な fallback）
+
 ## Alloy: 認証・認可
 
 実装に近い問い:
@@ -52,6 +73,7 @@ repo 内の例:
 - [`languages/alloy/app-rbac.als`](../languages/alloy/app-rbac.als)
 - [`languages/alloy/multi-tenant.als`](../languages/alloy/multi-tenant.als)
 - [`usecases/cloud-config-verification/cloudflare-workers-bindings.als`](../usecases/cloud-config-verification/cloudflare-workers-bindings.als)
+- [`usecases/offline-sync-convergence/lww-merge.als`](../usecases/offline-sync-convergence/lww-merge.als) — 関係の全順序性として書いた収束性
 
 Alloy が返すもの:
 
@@ -87,6 +109,8 @@ repo 内の例:
 - [FizzBee / Quint / TLA+ の `OrderCheckout` 対比](../languages/fizzbee/README.md)
 - [`usecases/p2p-game-cheat-detection/`](../usecases/p2p-game-cheat-detection/)
 - [`usecases/cloud-config-verification/`](../usecases/cloud-config-verification/)
+- [`usecases/idempotency-key/`](../usecases/idempotency-key/) — safety と liveness が別々に壊れる例
+- [`usecases/write-skew-seat-limit/`](../usecases/write-skew-seat-limit/) — isolation level を定数にして 3 設計を比べる例
 
 temporal model checker が返すもの:
 
