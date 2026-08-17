@@ -1,8 +1,8 @@
 # Rocq
 
-Rocq は、成熟した ecosystem を持つ interactive theorem prover である。
-この repo では小さい RBAC smoke probe だけを置く。GitBook では
-「Lean ではなく Rocq を選ぶ理由」を明確にする章として扱う。
+Rocq は、program、formal specification、proof を同じ言語で記述し、kernel で
+proof term を検査する interactive theorem prover である。この repo では
+compiler correctness を主例にして、「Lean ではなく Rocq を選ぶ理由」を具体化する。
 
 ## いつ選ぶか
 
@@ -15,30 +15,49 @@ Rocq を選ぶ理由は、言語そのものより ecosystem の場合が多い�
 | proof assistant metatheory | MetaCoq |
 | OS / kernel / semantics 系の先行資産 | Rocq ecosystem |
 
-## 最小チュートリアルの方向性
+## 最小チュートリアル: compiler correctness
 
-この book で Rocq tutorial を足すなら、次のどちらかに絞る。
-
-1. Lean と同じ RBAC monotonicity を Rocq で書き、記法差分を見せる。
-2. Iris を使う前段として、単純な heap invariant / separation logic の入口を置く。
-
-この repo の smoke probe:
+小さな式言語に source semantics `eval` を定義する。
 
 ```coq
-Inductive permission := Read | Write | AdminPerm.
-Inductive role := Viewer | Editor | Admin.
+Inductive expr : Type :=
+| Lit (value : nat)
+| Add (lhs rhs : expr)
+| Sub (lhs rhs : expr).
 
-Definition permits (r : role) (p : permission) : bool := ...
-
-Theorem viewer_subset_editor :
-  forall p, permits Viewer p = true -> permits Editor p = true.
+Fixpoint eval (e : expr) : nat := ...
 ```
+
+次に stack machine の命令、1 step、program 実行、compiler を定義する。source と target の
+意味をつなぐ契約は次の theorem になる。
+
+```coq
+Theorem compile_correct :
+  forall e s,
+    exec (compile e) s = Some (eval e :: s).
+```
+
+`e` は有限 scope 内のサンプルではなく、任意の深さの式である。証明は `e` の構造帰納法を使い、
+literal、addition、subtraction の全 constructor を閉じる。任意の初期 stack `s` を保つので、
+compiled program が underflow しないことも同じ契約に含まれる。
 
 実行:
 
 ```sh
-coqc languages/rocq/Rbac.v
+just check-rocq
 ```
+
+この guard は正しい compiler を check した後、左右の operand を逆転した compiler が
+`5 - 2` を `0` にしてしまい、期待値 `3` との不一致で拒否されることも確認する。
+
+個別の正例だけなら次でよい。
+
+```bash
+rocq compile languages/rocq/Rbac.v
+rocq compile languages/rocq/StackCompiler.v
+```
+
+完全な説明は [`../../languages/rocq/README.md`](../../languages/rocq/README.md) を参照する。
 
 ## レシピ
 
@@ -60,6 +79,13 @@ Rocq + Iris は、lock-free stack や memory model まで踏み込む場合に�
 言語処理系や DSL の意味論を証明するなら Rocq は候補になる。
 アプリケーションの config validator には重すぎる。
 
+この repo の例を次の順に拡張できる。
+
+1. source language に変数、分岐、失敗を追加する。
+2. optimizer pass ごとに意味保存 lemma を置く。
+3. bytecode verifier または target machine の safety と合成する。
+4. 必要なら proof 済み compiler function を OCaml / Haskell / Scheme へ extract する。
+
 ## 避ける使い方
 
 - 最初の形式手法として導入する
@@ -68,5 +94,15 @@ Rocq + Iris は、lock-free stack や memory model まで踏み込む場合に�
 
 近い repo 例:
 
+- [`../../languages/rocq/StackCompiler.v`](../../languages/rocq/StackCompiler.v)
+- [`../../languages/rocq/BrokenStackCompiler.v`](../../languages/rocq/BrokenStackCompiler.v)
 - [`../../languages/rocq/Rbac.v`](../../languages/rocq/Rbac.v)
 - Lean の対比として [`../../languages/lean/Rbac.lean`](../../languages/lean/Rbac.lean)
+- [Rocq と Lean を program verification で選ぶ基準](../../docs/rocq-vs-lean-program-verification.md)
+
+公式資料:
+
+- [A Tour of Rocq](https://rocq-prover.org/docs/tour-of-rocq)
+- [Batch compilation with `rocq compile`](https://rocq-prover.org/doc/V9.1.1/refman/practical-tools/coq-commands.html)
+- [Rocq Platform](https://rocq-prover.org/platform)
+- [Program extraction](https://rocq-prover.org/doc/V9.1.1/refman/addendum/extraction.html)

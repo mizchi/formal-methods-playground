@@ -1,0 +1,23 @@
+---
+deadlock_detection: false
+options:
+  max_actions: 2
+  max_concurrent_actions: 1
+---
+
+# Negative control: without fairness the pending state may stutter forever.
+
+OrderState = enum('PAYMENT_PENDING', 'PAID')
+
+
+action Init:
+    state = OrderState.PAYMENT_PENDING
+
+
+atomic action PaymentSucceeded:
+    require state == OrderState.PAYMENT_PENDING
+    state = OrderState.PAID
+
+
+always eventually assertion PaymentResolves:
+    return state != OrderState.PAYMENT_PENDING

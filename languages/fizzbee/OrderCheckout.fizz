@@ -1,0 +1,82 @@
+---
+deadlock_detection: false
+options:
+  max_actions: 10
+  max_concurrent_actions: 1
+---
+
+# The same checkout lifecycle as languages/tla/OrderCheckout.tla and
+# languages/quint/OrderCheckout.qnt, written as executable design pseudocode.
+
+OrderState = enum(
+    'CART',
+    'PAYMENT_PENDING',
+    'PAID',
+    'SHIPPED',
+    'REFUNDED',
+    'CANCELLED',
+)
+ITEMS = set(['book', 'game'])
+
+
+action Init:
+    state = OrderState.CART
+    cart = set()
+    refunded = False
+
+
+atomic action AddItem:
+    require state == OrderState.CART
+    require len(cart) < len(ITEMS)
+    item = oneof ITEMS
+    require item not in cart
+    cart.add(item)
+
+
+atomic action Checkout:
+    require state == OrderState.CART
+    require len(cart) > 0
+    state = OrderState.PAYMENT_PENDING
+
+
+atomic fair action PaymentSucceeded:
+    require state == OrderState.PAYMENT_PENDING
+    state = OrderState.PAID
+
+
+atomic fair action PaymentFailed:
+    require state == OrderState.PAYMENT_PENDING
+    state = OrderState.CART
+
+
+atomic fair action PaymentTimeout:
+    require state == OrderState.PAYMENT_PENDING
+    state = OrderState.CANCELLED
+
+
+atomic action Ship:
+    require state == OrderState.PAID
+    state = OrderState.SHIPPED
+
+
+atomic action Refund:
+    require state in [OrderState.PAID, OrderState.SHIPPED]
+    state = OrderState.REFUNDED
+    refunded = True
+
+
+atomic action Cancel:
+    require state in [OrderState.CART, OrderState.PAYMENT_PENDING]
+    state = OrderState.CANCELLED
+
+
+always assertion TypeOK:
+    return state in dir(OrderState) and cart.issubset(ITEMS)
+
+
+always assertion NoRefundWithoutRefundedState:
+    return not refunded or state == OrderState.REFUNDED
+
+
+always eventually assertion PaymentResolves:
+    return state != OrderState.PAYMENT_PENDING

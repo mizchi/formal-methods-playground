@@ -32,8 +32,8 @@
 | branch guard / validator / feature flag / policy predicate の目視レビュー | 実装から抜いた述語を直接 solver にかける | Z3 / SMT-LIB | SAT/UNSAT と必要なら witness |
 | spreadsheet 的な設定チェック | 矛盾設定、到達不能設定、dead config の網羅検査 | Z3 or Alloy | 不正設定の witness、または有限スコープでの不在証明 |
 | RBAC、所有権、tenant、routing、workflow のホワイトボード図 | 関係モデル + 有限スコープ反例探索 | Alloy | バグを示す小さな具体例 |
-| 「非同期処理はいつか解決するはず」という設計会話 | safety / liveness を持つ時間モデル | TLA+ | stuck / unsafe / unfair な trace |
-| mock だらけの actor / message protocol テスト | 実行可能な state machine model と schedule 探索 | P | 再現可能な event schedule |
+| 「非同期処理はいつか解決するはず」という設計会話 | safety / liveness を持つ時間モデル | FizzBee, Quint, or TLA+ | stuck / unsafe / unfair な trace |
+| mock だらけの actor / message protocol テスト | 実行可能な state machine model と schedule 探索 | FizzBee MBT or P | 再現可能な event schedule または model-driven test |
 | 境界値が多い逐次ロジックの unit test | pre/postcondition と loop invariant | Dafny / MoonBit `moon prove` | 証明済み obligation、または失敗箇所 |
 | データ構造の挙動に関する手書きの主張 | 抽象モデル + 表現不変条件 | MoonBit `moon prove`, Dafny, Why3 | 実装が abstract model を保つ API contract |
 | 「この refactor は等価なはず」という勘 | old-vs-new の等価性 / 差分 query | Z3, Dafny, MoonBit `moon prove` | 等価性の証明、または差が出る入力 |
@@ -208,7 +208,7 @@ CommittedEventuallyOut == DB commit 済み outbox は fairness の下でいつ�
 
 | 問い | ツール |
 | --- | --- |
-| retry / timeout / crash / queue delivery の全順序を見たい | TLA+ |
+| retry / timeout / crash / queue delivery の全順序を見たい | FizzBee / Quint / TLA+ |
 | service を actor / state machine として実装に近く書きたい | P |
 | service A から service B に到達できるか、SG / route / ACL の構造だけ見たい | Alloy |
 
@@ -265,7 +265,7 @@ NoLostUpdate   == 2 thread の increment が片方消えない
 
 | 問い | ツール |
 | --- | --- |
-| read/check/write の interleaving で race があるか | TLA+ |
+| read/check/write の interleaving で race があるか | FizzBee / Quint / TLA+ |
 | thread ではなく message actor に寄せられるか | P |
 | lock 内の純粋な更新関数が invariant を保つか | Dafny / MoonBit `moon prove` |
 | lock-free data structure や memory model まで証明したい | Rocq + Iris など。通常の app では重い |
@@ -421,13 +421,15 @@ implementation checks allowlist first
 | --- | --- | --- | --- |
 | 純粋述語の bad input を探す | Z3 | 実装にほぼ純粋な decision function があり、witness がほしい | 性質が event order や concurrency に依存する |
 | 構造的な整合性を検査する | Alloy | domain が entity と relation: role, owner, tenant, route, graph reachability | 本当のバグが fairness、無限 queue、長時間の time にある |
-| 非同期の safety を検査する | TLA+ | あらゆる action 順序で「悪いことが起きない」を見たい | 有限の関係モデルで同じ問題が早く出せる |
-| 非同期の liveness を検査する | TLA+ | 「いつか良いことが起きる」と fairness 仮定が本質 | 意味のある progress property がない |
+| 実行可能な distributed design document を正本にする | FizzBee | Python 風 action、role/RPC、図、fault 仮定、MBT への導線を engineer が所有したい | 静的型、TLAPS、成熟した TLA+ module が本質 |
+| 型付きで実行可能な workflow / protocol contract を正本にする | Quint | application engineer が型、action、例、temporal property を所有したい | TLAPS、高度な refinement、既存 TLA+ module が本質 |
+| 非同期の safety を検査する | FizzBee, Quint, or TLA+ | あらゆる action 順序で「悪いことが起きない」を見たい | 有限の関係モデルで同じ問題が早く出せる |
+| 非同期の liveness を検査する | FizzBee, Quint, or TLA+ | 「いつか良いことが起きる」と fairness 仮定が本質 | 意味のある progress property がない |
 | 実装に近い actor protocol を検査する | P | system が typed message を投げ合う machine として自然に書ける | design-level model で十分 |
 | 逐次コードの contract を証明する | Dafny | 関数を Dafny で書く / 写すことができ、pre/post/invariant を付けられる | production code が別言語で、翻訳コストを払えない |
 | MoonBit 実装の contract を証明する | MoonBit `moon prove` | 実装が MoonBit で、contract と proof-only model を隣に置ける | Z3 のような model extraction や temporal exploration が必要 |
 | 再利用する数学 / 型レベル性質を証明する | Lean 4 | theorem が有限スコープではなく、将来追加される値も含めて普遍的 | bounded counterexample で十分に意思決定できる |
-| 成熟した proof ecosystem を使う | Rocq | CompCert, Iris, MetaCoq など Rocq 固有資産が必要 | Lean/mathlib でより低コストに足りる |
+| mechanized semantics を証明する、または成熟した proof ecosystem を使う | Rocq | compiler/interpreter semantics、CompCert、Iris、MetaCoq などが load-bearing | Lean/mathlib でより低コストに足りる |
 | C を書き換えずに検査する | CBMC / Frama-C | C codebase で、bounded check や ACSL annotation が合う | ロジックをもっと綺麗な pure model に切り出せる |
 | Rust の ownership を意識して証明する | Verus | Rust 風の code + pre/post/ghost reasoning がほしい | 対象が Rust でない、または verifier subset を受け入れられない |
 
@@ -436,7 +438,9 @@ implementation checks allowlist first
 | 残したい成果物 | 向くツール | 理由 |
 | --- | --- | --- |
 | 実 config file に対する CI validator | Z3 | config predicate を直接 encode でき、安定した exit code を返せる |
-| design review 用の反例 | Alloy or TLA+ | 会話できる具体 instance / trace が出る |
+| design review 用の反例 | Alloy, FizzBee, Quint, or TLA+ | 会話できる具体 instance / trace / diagram が出る |
+| 実行可能で可視化できる distributed-system design | FizzBee | 擬似コード、role/RPC、safety/liveness、図、MBT への導線を1つの model に置ける |
+| 型付きで実行可能な temporal domain contract | Quint | domain type、action、例、invariant、liveness を1つの model に置ける |
 | pure rule の regression guard | Z3 or Dafny | バグを見つけた後、その rule を lock できる |
 | MoonBit code の regression guard | MoonBit `moon prove` | contract と実装を同じ package に置ける |
 | 実行可能な protocol model | P | spec 自体が state machine と message になる |
@@ -449,12 +453,14 @@ implementation checks allowlist first
 | --- | --- | --- | --- | --- |
 | Z3 / SMT-LIB | supported theory 上の充足可能性、充足不能性、等価性 | validator, feature flag, eligibility, wire compatibility, config reachability | `get-model` を使うと高い。CI では SAT/UNSAT のみでもよい | `languages/z3/checkout_form.smt2` |
 | Alloy 6 | 小さい scope における bounded relational fact と temporal assertion | RBAC, ownership, tenant isolation, workflow reachability, graph-shaped infra | 高い。具体 relation instance と graph visualizer がある | `languages/alloy/app-rbac.als`, `languages/alloy/multi-tenant.als`, `usecases/terraform-reachability/` |
+| FizzBee | Python 風の imperative action、role/RPC、safety/liveness、fault-aware distributed design | distributed-system design doc, retry, queue, RPC workflow, resilience review, model-based testing | 高い。action trace、state graph、sequence diagram、explorer がある | `languages/fizzbee/OrderCheckout.fizz` |
+| Quint | 型付きで実行可能な TLA-style state transition、safety、liveness | application workflow, retry/timeout, queue, protocol contract | 高い。TLC/Apalache の action trace に加え REPL/run/test がある | `languages/quint/OrderCheckout.qnt` |
 | TLA+ / TLC | state transition と action interleaving 上の safety / liveness | distributed protocol, retry loop, background job, event sourcing, queue | 高い。action 名付きの番号付き trace が出る | `languages/tla/OrderCheckout.tla`, `languages/tla/ActorMailbox.tla` |
 | P | actor state machine と message schedule 上の safety | actor protocol, device/service protocol, generated state-machine code | 高い。再現可能な schedule が出る | `languages/p/PingPong/` |
 | Dafny | 逐次 program contract、loop invariant、algebraic datatype、ghost state | business-rule function, parser, normalizer, data transformation | 中。source location と failed obligation が出る | `languages/dafny/checkout_form.dfy`, `languages/dafny/rbac_screens.dfy` |
 | MoonBit `moon prove` | MoonBit の function contract、loop invariant、`.mbtp` の abstract model、表現不変条件 | MoonBit library, validator, finance/domain operation, data structure | 中。model finder ではなく proof obligation failure が中心 | `languages/moonbit/checkout_form/` |
 | Lean 4 | inductive type 上の普遍定理、数学構造、証明付き executable definition | permission lattice, type-level law, 実装より長く残る algorithm theorem | bug hunting には低い。最終 theorem の信頼性は高い | `languages/lean/Rbac.lean` |
-| Rocq | 成熟した対話的証明、program semantics、Iris による separation logic、compiler/kernel 級の証明 | compiler correctness, concurrent data structure, mechanized semantics | quick counterexample には低い。proof artifact としては非常に高い | 未 probe |
+| Rocq | 成熟した対話的証明、program semantics、Iris による separation logic、compiler/kernel 級の証明 | compiler correctness, concurrent data structure, mechanized semantics | quick counterexample には低い。proof artifact としては非常に高い | `languages/rocq/StackCompiler.v` |
 | Why3 | 複数 prover backend に投げる verification-condition generation | shared verification backend, algorithm proof, hand-written WhyML | 中。backend / prover report に依存 | MoonBit `moon prove` が利用 |
 | Verus | Rust 風の program verification と ghost/spec code | ownership-sensitive invariant を持つ Rust module | 中。verifier diagnostic が出る | 未 probe |
 | Tamarin / ProVerif | symbolic security protocol の secrecy / authentication | login protocol, key exchange, token flow, adversarial message system | 高い。attack trace が出る | 未 probe |
@@ -466,8 +472,9 @@ implementation checks allowlist first
 
 1. pure predicate を抽出し、Z3 で実データに近い query を回す。
 2. 構造的な domain rule を Alloy で model 化し、反例を集める。
-3. order / fairness / liveness が load-bearing になった場合だけ、
-   async protocol を TLA+ に移す。
+3. order / fairness / liveness が load-bearing になったら、Python 風の可視化可能な
+   design model と MBT を正本にする場合は FizzBee、型付きで実行可能な domain contract
+   なら Quint、proof/tool ecosystem が本質なら TLA+ を直接使う。
 4. 新しく書く逐次ロジックには Dafny または MoonBit `moon prove` で
    code-level contract を置く。
 5. Lean / Rocq は、再利用する theorem や proof ecosystem がコストを

@@ -13,7 +13,7 @@
 「結果を分かりやすく言い換える作業」と
 「何を証明する価値があるかを決める作業」である。
 
-AI が得意なのは、すでに候補になった性質を Z3 / Alloy / TLA+ などに渡せる
+AI が得意なのは、すでに候補になった性質を Z3 / Alloy / FizzBee / Quint / TLA+ などに渡せる
 形へ整え、`SAT`、`UNSAT`、counterexample、trace、proof failure を
 アプリケーションの言葉へ戻すこと。
 
@@ -75,10 +75,10 @@ worker はいつか job を処理する。
 | --- | --- | --- |
 | 述語 | 入力から `true / false` を返す判定 | Z3, Dafny, MoonBit prove |
 | 関係 | user、role、tenant、resource の対応 | Alloy |
-| 状態 | order、job、session などの lifecycle | Alloy, TLA+, P |
-| 遷移 | request、retry、timeout、ack、crash | TLA+, P |
-| 不変条件 | どの時点でも破れてはいけない性質 | TLA+, Alloy, Dafny, MoonBit prove |
-| 到達可能性 | ある状態・組み合わせに行けるか | Alloy, TLA+, Z3 |
+| 状態 | order、job、session などの lifecycle | Alloy, FizzBee, Quint, TLA+, P |
+| 遷移 | request、retry、timeout、ack、crash | FizzBee, Quint, TLA+, P |
+| 不変条件 | どの時点でも破れてはいけない性質 | FizzBee, Quint, TLA+, Alloy, Dafny, MoonBit prove |
+| 到達可能性 | ある状態・組み合わせに行けるか | Alloy, FizzBee, Quint, TLA+, Z3 |
 | 等価性 | old と new が同じ判定を返すか | Z3, Dafny, MoonBit prove |
 | 普遍定理 | 型に属する全値で成り立つ性質 | Lean, Rocq |
 
@@ -89,7 +89,7 @@ worker はいつか job を処理する。
 | 「使いやすい UI」 | 判定したい性質が曖昧で、反例の形も曖昧 |
 | 「売上が上がる recommendation」 | 確率・分布・外部環境に依存する |
 | 「LLM の回答品質」 | 正しさの述語が domain ごとに揺れる |
-| 「外部 API はだいたい成功する」 | 外部世界の確率的性質であり、protocol safety とは別 |
+| 「外部 API はだいたい成功する」 | 外部世界の確率的性質であり、通常の protocol safety とは別。分布を定義できるなら FizzBee などの probabilistic/performance model に進める |
 | 「運用で気をつける」 | 状態・操作・責任境界に分解されていない |
 
 モデル化できないのではなく、まず別の作業が必要になる。
@@ -108,10 +108,10 @@ worker はいつか job を処理する。
 | 優先順位バグ | allowlist が denylist より先に評価される | Z3 |
 | tenant 境界の穴 | BillingAdmin override が project read まで広がる | Alloy |
 | 到達不能 / dead branch | 設定されているが絶対に選ばれない rule | Z3, Alloy |
-| read-modify-write race | 2 thread が古い count を読んで両方 accept | TLA+ |
-| lost update | crash 前に publish されない outbox | TLA+ |
-| liveness の穴 | fairness なしでは worker が永遠に job を取らない | TLA+ |
-| protocol violation | response が request より先に観測される | P |
+| read-modify-write race | 2 thread が古い count を読んで両方 accept | FizzBee / Quint / TLA+ |
+| lost update | crash 前に publish されない outbox | FizzBee / Quint / TLA+ |
+| liveness の穴 | fairness なしでは worker が永遠に job を取らない | FizzBee / Quint / TLA+ |
+| protocol violation | response が request より先に観測される | FizzBee / P |
 | loop invariant の不足 | binary search の候補区間が壊れる | Dafny, MoonBit prove |
 | 抽象モデルとのずれ | vector の runtime tree と sequence model が一致しない | MoonBit prove |
 | 普遍性の思い込み | viewer <= editor が permission 追加後に壊れる | Lean, Rocq |

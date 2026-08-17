@@ -46,6 +46,58 @@
 - fairness を含む liveness
 - 大規模で長い trace の網羅
 
+## FizzBee
+
+できること:
+
+- Python/Starlark 風の design pseudocode と `role` / RPC
+- atomic、serial、parallel action の interleaving
+- safety assertion、LTL subset、action/choice fairness
+- state graph、sequence diagram、whiteboard による設計レビュー
+- durable/ephemeral state と暗黙の fault injection
+- 同じ model から model-based testing、確率・性能 modeling へ進む workflow
+
+向く対象:
+
+- distributed system / microservice の設計書
+- retry、queue、RPC、gossip、replication、two-phase commit
+- crash / message loss / network partition を含む failure design
+- Python 風の擬似コードを設計の正本にして実装テストへ接続する場合
+
+苦手なこと:
+
+- 静的型を contract にしたい場合
+- theorem proving、高度な refinement、成熟した module ecosystem
+- 単純な predicate や relation だけの検査
+- production implementation そのものの証明
+
+## Quint
+
+できること:
+
+- sum type、record、map を使った型付き domain state
+- `init` / `step` と `all` / `any` / `nondet` による実行可能な状態遷移
+- safety invariant と fairness を含む liveness property
+- REPL、run、test による例示と、TLC / Apalache backend による model check
+- Choreo による distributed protocol scaffold
+- ITF trace、Trace Explorer、Rust向けQuint Connectによるmodel-based testingへの接続
+
+向く対象:
+
+- order / job / session lifecycle
+- saga、retry、timeout、queue、outbox
+- application-level protocol contract
+- state machine を実装から独立した domain DSL として維持する場合
+
+苦手なこと:
+
+- 単純な入力 predicate や構造だけの relation
+- production implementation そのものの検証
+- TLAPS を使う theorem proving や高度な TLA+ refinement
+
+LLM Kit、Choreo、Connect、Trace Explorerの役割とproof boundaryは
+[`Quintの周辺ツール`](../docs/quint-ecosystem.md)を参照する。
+
 ## TLA+
 
 できること:
@@ -67,6 +119,11 @@
 
 - 単純な述語検査
 - role / ownership の構造だけの問題
+
+この repo では [`OrderCheckout`](../languages/fizzbee/README.md) を TLA+、Quint、FizzBee で
+書き、同じ 20 の抽象状態と反例を比較している。Python 風の擬似コード・図・fault/MBT
+workflow なら FizzBee、型検査・REPL・test なら Quint、既存 TLA+ ecosystem や TLAPS を
+直接使うなら TLA+ が自然である。
 
 ## P
 
@@ -149,3 +206,9 @@
 
 - アプリの config bug を素早く見つけること
 - domain owner にそのまま見せる反例生成
+
+repo 内の例:
+
+- Lean: [`languages/lean/Rbac.lean`](../languages/lean/Rbac.lean)
+- Rocq: [`languages/rocq/StackCompiler.v`](../languages/rocq/StackCompiler.v)
+- Rocq negative control: [`languages/rocq/BrokenStackCompiler.v`](../languages/rocq/BrokenStackCompiler.v)

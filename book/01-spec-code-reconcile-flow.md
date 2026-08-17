@@ -89,7 +89,7 @@ domain question:
    述語、関係、状態、遷移、不変条件、到達可能性、等価性に落とす。
 
 5. 機械に反例を探させる
-   Z3 / Alloy / TLA+ / P / Dafny / MoonBit prove / Lean / Rocq から選ぶ。
+   Z3 / Alloy / FizzBee / Quint / TLA+ / P / Dafny / MoonBit prove / Lean / Rocq から選ぶ。
 
 6. 結果をドメイン語へ戻す
    sat / trace / proof failure を、業務上の具体例として言い換える。

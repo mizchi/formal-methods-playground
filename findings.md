@@ -9,9 +9,12 @@ The probes are all in the repo:
 | --- | --- | --- |
 | Z3 | `languages/z3/checkout_form.smt2` | implementation-extracted checkout predicate + broken-variant witness |
 | Alloy 6 | `languages/alloy/app-rbac.als` | RBAC + screen-navigation safety + sanity |
+| FizzBee | `languages/fizzbee/OrderCheckout.fizz` | Python-like visual design restatement + safety/liveness negative controls |
+| Quint | `languages/quint/OrderCheckout.qnt` | typed executable restatement of the async checkout model + safety/liveness negative controls |
 | TLA+ | `languages/tla/OrderCheckout.tla` | async order state machine + safety + liveness |
 | Dafny | `languages/dafny/checkout_form.dfy` | conditional form invariants + loop verification |
 | Lean 4 | `languages/lean/Rbac.lean` | role-hierarchy monotonicity, universal proof |
+| Rocq | `languages/rocq/StackCompiler.v` | compiler semantics preservation + reversed-operand negative control |
 
 ---
 
@@ -124,6 +127,37 @@ hierarchies, configuration constraints, "are these two graphs
 related," ownership / RBAC / namespace-scoping. Anything you
 can draw as nodes-and-edges and check "does this property hold
 in every small instance."
+
+---
+
+## FizzBee — executable distributed design document
+
+### What it expresses well
+
+FizzBee expresses the same `OrderCheckout` state machine as imperative
+Python/Starlark-like actions. The good model reaches 20 unique states,
+matching the TLA+/Quint abstraction. `fair action` makes payment
+resolution explicit, while the no-fairness negative control returns the
+minimal `PAYMENT_PENDING -> stutter` liveness witness.
+
+Its distinctive value is above the transition relation: roles/RPCs,
+non-atomic yield points, durability annotations, implicit fault injection,
+state/sequence visualizations, and a path from the design model to
+model-based implementation testing.
+
+### What I tripped on
+
+FizzBee v0.5.2 prints `FAILED:` for invariant and liveness violations but
+still exits with status 0. A CI wrapper must therefore inspect semantic
+output, not only process status. The surface is also dynamically typed;
+FizzBee enums are string sugar, unlike Quint's statically checked sum types.
+
+### When to reach for it again
+
+Use it when a distributed-system design document should look like executable
+pseudocode and produce diagrams, especially when crash/message behavior or
+MBT is part of the workflow. Prefer Quint for a typed TLA-semantics contract,
+and direct TLA+ for mature modules, PlusCal/TLAPS, or advanced refinement.
 
 ---
 
@@ -313,6 +347,59 @@ Properties that are *theorems*, not bug-hunts. "This function
 respects this invariant for every input" — that's a Lean job.
 "There's no 4-user trace that triggers this state" — that's an
 Alloy job. The two are not interchangeable.
+
+---
+
+## Rocq — stack compiler semantics preservation
+
+### What it expresses well
+
+The probe gives a source expression language and a stack machine separate
+operational semantics, then proves the compiler connects them:
+
+```coq
+Theorem compile_correct :
+  forall e s,
+    exec (compile e) s = Some (eval e :: s).
+```
+
+The quantifiers matter. This is not a test of a few expressions: structural
+induction covers every expression depth and every initial stack. The result
+also rules out stack underflow for compiler-produced programs.
+
+### What I tripped on
+
+An operand-order bug is invisible if the language only contains addition.
+Adding subtraction made the negative control discriminating: reversing the
+compile order turns `5 - 2` into `2 - 5`, so natural-number subtraction returns
+`0` instead of `3`. `scripts/check-rocq.sh` requires Rocq to reject that exact
+`Some [0]` versus `Some [3]` mismatch.
+
+The current Rocq CLI is `rocq compile`; `coqc` remains a compatibility shim in
+Rocq 9. Keeping the repository command on the current spelling makes the
+tool's identity visible without changing the `.v` source format.
+
+### Surface readability score
+
+**6 / 10** for the definitions, **4 / 10** for a reader new to tactic proofs.
+The source evaluator, instruction semantics, and compiler are ordinary
+functional definitions. The `exec_append` lemma and induction script are where
+proof-engineering knowledge starts to become necessary.
+
+### Counter-example quality
+
+Rocq is not a model finder. A false theorem produces a failed goal or a type
+mismatch, not a generated trace. Here the domain witness is deliberately fixed
+in the negative control, so CI can translate the failure as “operand order made
+5 - 2 evaluate to 0 instead of 3.” Use Alloy or Quint first if the witness is
+not already known.
+
+### When to reach for it again
+
+Compiler and interpreter correctness, DSL semantics, optimizer rewrites,
+bytecode soundness, or low-level concurrent reasoning that needs Iris. For a
+general mathematical theorem with no Rocq-specific ecosystem dependency, Lean
+remains the personal default.
 
 ---
 
@@ -762,8 +849,9 @@ The mapping that came out of writing the probes:
 | RBAC tables, scope-permissions, "who can do what" | **Alloy** (bounded check is plenty; instances are reviewable) |
 | Universal RBAC monotonicity ("editor strictly extends viewer") | **Lean** (Alloy can't quantify over arbitrary Permission types) |
 | Screen-navigation graphs, workflow safety in finite scope | **Alloy 6** (temporal extension; no need to lift to TLA+) |
-| Async state machine, payment / retry / timeout | **TLA+** (fairness + liveness are first-class) |
-| Distributed protocol, eventual consistency | **TLA+** |
+| Distributed design as Python-like pseudocode, roles/RPCs, diagrams, fault model, and MBT | **FizzBee** |
+| Async state machine, payment / retry / timeout owned as an application domain contract | **Quint** (typed executable actions + first-class fairness/liveness) |
+| Distributed protocol, eventual consistency | **FizzBee** for design pseudocode/visualization/fault/MBT; **Quint** for a typed authoring DSL; **TLA+** for advanced proof/tooling and existing modules |
 | Conditional invariants on records, validation predicates | **Dafny** (SMT discharges case-splits trivially) |
 | Sequential algorithm with non-trivial loop invariants | **Dafny** |
 | Refinement: "this implementation implements this spec" | **Dafny** or **Lean** depending on automation budget |
@@ -776,11 +864,13 @@ The mapping that came out of writing the probes:
   one impersonates another"), Lean proves the table itself is
   monotonic ("editor ≥ viewer for any permission you might add
   in the future"). Both are RBAC, but different questions.
-- **TLA+ replaces Alloy 6's temporal only when fairness is in
+- **FizzBee / Quint / TLA+ replace Alloy 6's temporal only when fairness is in
   play.** If the question is "in any 6-step trace, does X
   hold," Alloy 6 is faster to write and more visual. The
   moment "X eventually happens under fairness" enters the
-  vocabulary, TLA+ takes over.
+  vocabulary, the dedicated temporal tools take over. Choose FizzBee for
+  executable design pseudocode/visualization/fault/MBT, Quint for a typed
+  executable domain contract, and TLA+ for its advanced ecosystem.
 - **Dafny will not replace a runtime test.** Verifying that
   `SumPrices` returns `total > 0` does NOT tell you the
   function is actually called with `prices != []` in

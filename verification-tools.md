@@ -21,7 +21,8 @@ After writing one or more probes per tool against
 application-level specs (RBAC, multi-tenant isolation,
 expense-approval workflow, terraform reachability, async
 order checkout, event-sourced ledger, actor-model
-ping-pong, implementation-extracted checkout predicates), the
+ping-pong, a Python-like FizzBee checkout model, a typed Quint checkout model, implementation-extracted
+checkout predicates), the
 operational picking rule is:
 
 1. **If the implementation already exposes a pure predicate,
@@ -38,11 +39,15 @@ operational picking rule is:
    state-machine safety. The surface reads like the design
    doc; counter-examples are concrete instances; setup cost
    is one nix package.
-3. **Escalate to TLA+** when *fairness* or *liveness* enters
-   the vocabulary. Eventual consistency, retry semantics,
+3. **Escalate to FizzBee, Quint, or TLA+** when *fairness* or *liveness*
+   enters the vocabulary. Eventual consistency, retry semantics,
    "this message is eventually delivered," "this state is
    eventually resolved" — Alloy 6 has temporal operators but
-   no fairness primitives. TLA+ does.
+   no fairness primitives. Prefer FizzBee when Python-like design
+   pseudocode, roles/RPCs, visualization, fault injection, or MBT
+   should be the source of truth; Quint when static types and TLA
+   semantics with REPL/tests matter; write TLA+ directly when TLAPS,
+   advanced refinement, or an existing TLA+ ecosystem is load-bearing.
 4. **P** for actor-shaped *production* code where the spec
    ↔ implementation alignment matters enough to spend on
    codegen. Setup is the heaviest (.NET SDK + `DOTNET_ROOT`
@@ -51,7 +56,7 @@ operational picking rule is:
 5. **Dafny** for code-level reasoning — sequential algorithm
    correctness, conditional invariants on records, loop
    invariants. Not the right tool for "the system has this
-   property over any trace"; that's TLA+ or Alloy. The right
+   property over any trace"; that's FizzBee, Quint, TLA+, or Alloy. The right
    tool for "this function preserves this contract."
 6. **F*** for verified implementation cores when the code itself
    should carry refinement contracts. The `languages/fstar/CheckoutForm.fst`
@@ -61,8 +66,10 @@ operational picking rule is:
    code.
 7. **Lean 4 / Rocq** only when the proof obligation is
    genuinely *universal* (quantification over an open
-   inductive type, not just over a small scope). Most
-   application-level work doesn't need this.
+   inductive type, not just over a small scope). Prefer Lean for general
+   mathematics and type-level laws; choose Rocq when mechanized semantics or
+   a Rocq-specific proof ecosystem is load-bearing. Most application-level
+   work doesn't need either.
 8. **MoonBit `moon prove`** — annotation surface is the
    cleanest of the SMT-backed tools. Use the repository-local
    opam path (`just setup-moonbit-prove-opam`, then
@@ -75,7 +82,9 @@ operational picking rule is:
 
 Start with Z3 when you already have a pure implementation
 predicate. Otherwise start in Alloy. Only move when you hit
-something it can't say: fairness → TLA+; codegen-from-spec → P;
+something it can't say: fairness → FizzBee / Quint / TLA+;
+Python-like distributed design + diagrams/MBT → FizzBee; typed
+executable temporal domain DSL → Quint; codegen-from-spec → P;
 theorem about arbitrary recursive types → Lean; "this function
 body is correct" → Dafny / MoonBit prove; "this shipped core should
 carry refinement proofs" → F*.
@@ -90,8 +99,9 @@ application-level specs.
 If a project actually adopts this stack, the natural
 follow-on is a slim authoring guide ("how to start writing
 your domain in Alloy in 30 minutes") plus a few escalation
-recipes ("when your Alloy probe is feeling cramped, here's
-the TLA+ template for the same shape").
+recipes ("when your Alloy probe is feeling cramped, choose a
+FizzBee design model, Quint contract, or direct TLA+ template for
+the same shape").
 
 ---
 
@@ -109,7 +119,7 @@ collapses to one or two candidates.
 ```
                           finite & small        infinite & abstract
                           ───────────────────   ───────────────────
-counter-example only      Alloy, Spin, P        TLA+ (TLC), CBMC
+counter-example only      Alloy, Spin, P        FizzBee, Quint / TLA+ (TLC), CBMC
 proof certificate         Alloy (extended)      Lean, Rocq, Isabelle
 annotation + SMT          Dafny, Why3, Verus    Dafny + ghost, F*
 ```
@@ -125,11 +135,13 @@ finding via decide, etc. — but the heatmap is right.
 | --- | --- | --- |
 | RBAC / access control / config invariants | **Alloy** | relational logic is native; small-scope hypothesis catches the real bugs |
 | Screen-navigation graph + role permissions | **Alloy 6** | temporal extension + relational logic in one tool |
-| Async / distributed protocol safety + liveness | **TLA+** (TLC for bounded, Apalache for symbolic) | Lamport built it for exactly this; fairness / liveness are primitive |
-| State machine + message-passing semantics | **P** or **TLA+** | P has explicit message-handler syntax; TLA+ is more general |
+| Python-like distributed design, fault model, diagrams, and MBT | **FizzBee** | imperative actions, roles/RPCs, non-atomic yield points, fault injection, visualization, and implementation adapters share one model |
+| Typed executable workflow / protocol contract | **Quint** | TLA semantics with static types, executable actions, REPL/tests, and TLC/Apalache verification |
+| Async / distributed protocol safety + liveness | **FizzBee**, **Quint**, or **TLA+** | All express fairness/liveness; choose by pseudocode/visualization, typed TLA DSL, or mature proof/tool ecosystem |
+| State machine + message-passing semantics | **FizzBee**, **P**, **Quint**, or **TLA+** | FizzBee has roles/RPCs and fault-aware design actions; P has typed message handlers; Quint is a typed domain spec; TLA+ is the general escape hatch |
 | Sequential algorithm with pre/post + loop invariants | **Dafny** or **Why3** | SMT discharges; low ceremony; output is "verified / not verified" |
 | Imperative Rust with ownership-aware specs | **Verus** | borrow checker maps to separation logic; less proof work than Coq+Iris |
-| Compiler / interpreter / OS kernel correctness | **Rocq** | CompCert + seL4 + MetaCoq ecosystem; nobody else has the precedent |
+| Compiler / interpreter / OS kernel correctness | **Rocq** | CompCert + MetaCoq + CertiKOS ecosystem; strong mechanized-semantics precedent |
 | Concurrent data structures + heap invariants | **Iris (in Rocq)** | concurrent separation logic; research-grade but battle-tested |
 | Math theorems (analysis, algebra, combinatorics) | **Lean 4** + mathlib4 | by far the largest live math library; modern tactic story |
 | Security protocols (Needham-Schroeder, TLS handshakes) | **Tamarin** / **ProVerif** | symbolic crypto reasoning, Dolev-Yao adversary baked in |
@@ -159,6 +171,22 @@ the symbolic one, TLAPS the proof assistant. Surface syntax is
 math-heavy (lots of `[]` and `<>`) — PlusCal is a more readable
 imperative wrapper. **Don't reach for it** for structural / RBAC
 questions where Alloy's relational logic is more direct.
+
+**FizzBee** — Python/Starlark-like executable design specification
+and model checker for distributed systems. Atomic and non-atomic
+actions, roles/RPCs, durability annotations, implicit fault injection,
+fairness/liveness, and state/sequence visualizations make the model read
+like a design document. A separately distributed MBT tool can drive an
+implementation from the same model. **Reach for Quint** instead when
+static types and TLA semantics/tooling are the contract; **reach for TLA+
+directly** for TLAPS, advanced refinement, and mature modules.
+
+**Quint** — a typed, executable specification language based on
+TLA semantics. Its sweet spot is an application-level workflow or
+protocol contract that engineers should read, run, test, and model
+check. Verification delegates to TLC or Apalache. **Reach for TLA+
+directly** when theorem proving with TLAPS, advanced refinement, or
+existing TLA+ modules matter more than Quint's authoring experience.
 
 **Spin** + **Promela** — explicit-state model checker, older than
 TLA+, still the workhorse for protocol verification in industry.
@@ -220,12 +248,13 @@ fine for most things, sometimes painful for big metatheory.
 Sweet spot: math; program verification when refinement types
 don't reach. **Reach for it** as the default ITP today.
 
-**Rocq** (renamed from Coq, 2025) — older sibling. Has
-CompCert (verified C compiler), seL4 (verified microkernel),
-MetaCoq (verified Coq metatheory), Iris (concurrent separation
-logic). Notation heavier than Lean, automation weaker than
-Isabelle, ecosystem the most mature. **Reach for it** when one
-of those flagship libraries is exactly what you need.
+**Rocq** (formerly Coq) — older sibling. Has CompCert (verified C
+compiler), MetaCoq (verified Rocq metatheory), and Iris (concurrent
+separation logic). Notation heavier than Lean, automation weaker than
+Isabelle, ecosystem the most mature. **Reach for it** when mechanized
+semantics or one of those flagship libraries is exactly what you need.
+The repository's `languages/rocq/StackCompiler.v` proves a small
+compiler preserves source semantics for every expression and stack.
 
 **Isabelle/HOL** — classical HOL with Sledgehammer (the best
 SMT/ATP hammer in the ITP world). Strong for protocols
@@ -275,9 +304,11 @@ property without rewriting it.
    patterns all live here.
 
 2. **Does the property involve time / "eventually" / fairness?**
-   → TLA+ if the state space is huge or infinite, Alloy 6 if
-   the temporal claims live alongside relational ones in a
-   bounded model.
+   → FizzBee when Python-like design pseudocode, roles/RPCs, diagrams,
+   fault injection, or MBT should be the source of truth; Quint when a
+   typed executable domain contract is preferred; TLA+ when its advanced
+   proof/tool ecosystem is needed; Alloy 6 when temporal claims live
+   alongside relational ones in a bounded model.
 
 3. **Is there an actual program you want to verify, written
    in a specific language?** → annotation-style. Rust → Verus,
@@ -288,8 +319,8 @@ property without rewriting it.
    library is decisive.
 
 5. **Are you verifying a concurrent or distributed protocol?**
-   → TLA+ for the spec layer, Iris in Rocq if you need to
-   verify the implementation against the spec.
+   → FizzBee, Quint, or TLA+ for the spec layer, Iris in Rocq if you need
+   to verify the implementation against the spec.
 
 6. **Are you doing security protocol verification?** → Tamarin
    or ProVerif. Don't reinvent symbolic crypto reasoning.
@@ -308,8 +339,11 @@ property without rewriting it.
   authoring language *is* the value proposition. A Pkl-to-Alloy
   transpiler that hides Alloy's relational logic produces
   something worse than `.als` — the user reads the generated
-  Alloy on counter-example anyway. (Loose coupling via spec
-  cross-reference is fine; thick translation is not.)
+  Alloy on counter-example anyway. FizzBee and Quint are themselves
+  semantic specification languages, not domain wrappers that hide a
+  verifier; use their action/temporal contracts directly.
+  (Loose coupling via spec cross-reference is fine; thick
+  translation is not.)
 - **Don't pick by familiarity alone.** "I know Coq" is a fine
   reason to use Rocq for a one-off, but for a multi-year
   project, pick by problem fit.

@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "choreo": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1782206705,
+        "narHash": "sha256-PpCq/5JUSyZz4hBwBCBjrvnJgsNSqlAC5mRm9FEDOac=",
+        "owner": "quint-co",
+        "repo": "choreo",
+        "rev": "000cf4eed315187dc6f216a148781cff7dde6521",
+        "type": "github"
+      },
+      "original": {
+        "owner": "quint-co",
+        "repo": "choreo",
+        "rev": "000cf4eed315187dc6f216a148781cff7dde6521",
+        "type": "github"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -34,10 +51,65 @@
         "type": "github"
       }
     },
+    "quintConnect": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1779729703,
+        "narHash": "sha256-wEX7u3+5hG4unr7doLqksninM8oe3jxyKT4DCzpvGe0=",
+        "owner": "quint-co",
+        "repo": "quint-connect",
+        "rev": "4f018f54fc7dd4cef341d10111427bab59d3b307",
+        "type": "github"
+      },
+      "original": {
+        "owner": "quint-co",
+        "repo": "quint-connect",
+        "rev": "4f018f54fc7dd4cef341d10111427bab59d3b307",
+        "type": "github"
+      }
+    },
+    "quintLlmKit": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1782909526,
+        "narHash": "sha256-foxnLAWxLKItABamN83sN1lX7BiPKGCbD6F6hSJCypc=",
+        "owner": "quint-co",
+        "repo": "quint-llm-kit",
+        "rev": "cc75369f741af7d490936f82002c2d28e3b3d78d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "quint-co",
+        "repo": "quint-llm-kit",
+        "rev": "cc75369f741af7d490936f82002c2d28e3b3d78d",
+        "type": "github"
+      }
+    },
+    "quintTraceExplorer": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1769760063,
+        "narHash": "sha256-m9m/5PZWmZY2EyFvXXvGn+gf5hWMMDbyoVKysNo1iRw=",
+        "owner": "quint-co",
+        "repo": "quint-trace-explorer",
+        "rev": "d6b3d1fddea79f93bb8cca9fbc70b508e49e8e48",
+        "type": "github"
+      },
+      "original": {
+        "owner": "quint-co",
+        "repo": "quint-trace-explorer",
+        "rev": "d6b3d1fddea79f93bb8cca9fbc70b508e49e8e48",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
+        "choreo": "choreo",
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "quintConnect": "quintConnect",
+        "quintLlmKit": "quintLlmKit",
+        "quintTraceExplorer": "quintTraceExplorer"
       }
     },
     "systems": {

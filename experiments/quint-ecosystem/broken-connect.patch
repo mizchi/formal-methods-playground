@@ -1,0 +1,15 @@
+diff --git a/connect/examples/two_phase_commit/system.rs b/connect/examples/two_phase_commit/system.rs
+index c89bdc9..927df86 100644
+--- a/connect/examples/two_phase_commit/system.rs
++++ b/connect/examples/two_phase_commit/system.rs
+@@ -113,7 +113,9 @@ impl Participant {
+                 None
+             }
+             (_, Message::Commit) => {
+-                self.stage = Stage::Committed;
++                // Deliberately broken: a participant reports the opposite
++                // terminal state after receiving the coordinator's commit.
++                self.stage = Stage::Aborted;
+                 None
+             }
+             _ => None,

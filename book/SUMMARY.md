@@ -14,7 +14,7 @@
 - [8. 言語別チュートリアルとレシピ](tutorials/README.md)
   - [Z3 / SMT-LIB](tutorials/z3.md)
   - [Alloy](tutorials/alloy.md)
-  - [TLA+](tutorials/tla.md)
+  - [FizzBee / Quint / TLA+](tutorials/tla.md)
   - [P](tutorials/p.md)
   - [Dafny](tutorials/dafny.md)
   - [MoonBit prove](tutorials/moonbit-prove.md)

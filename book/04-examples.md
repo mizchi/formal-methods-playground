@@ -59,7 +59,7 @@ Alloy が返すもの:
 - どの relation が穴を作ったか
 - domain owner に見せられる具体 instance
 
-## TLA+: network / queue / retry
+## Temporal models: FizzBee / Quint / TLA+
 
 実装に近い問い:
 
@@ -81,10 +81,14 @@ repo 内の例:
 - [`languages/tla/ActorMailbox.tla`](../languages/tla/ActorMailbox.tla)
 - [`languages/tla/P2PGameProtocol.tla`](../languages/tla/P2PGameProtocol.tla)
 - [`languages/tla/CloudRollout.tla`](../languages/tla/CloudRollout.tla)
+- [`languages/quint/OrderCheckout.qnt`](../languages/quint/OrderCheckout.qnt)
+- [Quint と TLA+ の `OrderCheckout` 対比](../languages/quint/README.md)
+- [`languages/fizzbee/OrderCheckout.fizz`](../languages/fizzbee/OrderCheckout.fizz)
+- [FizzBee / Quint / TLA+ の `OrderCheckout` 対比](../languages/fizzbee/README.md)
 - [`usecases/p2p-game-cheat-detection/`](../usecases/p2p-game-cheat-detection/)
 - [`usecases/cloud-config-verification/`](../usecases/cloud-config-verification/)
 
-TLA+ が返すもの:
+temporal model checker が返すもの:
 
 - action 名付きの trace
 - stuck する state
@@ -151,19 +155,21 @@ Lean が返すもの:
 - check 済み proof term
 - 実装から独立して残る仕様
 
-## Rocq: 成熟 ecosystem に向けた smoke probe
+## Rocq: compiler correctness
 
 実装に近い問い:
 
 ```text
-Lean と同じ RBAC monotonicity を、Rocq toolchain でも CI で確認できるか?
+source evaluator と compiled stack machine は、任意の式と初期 stack で同じ結果になるか?
 ```
 
 repo 内の例:
 
-- [`languages/rocq/Rbac.v`](../languages/rocq/Rbac.v)
+- [`languages/rocq/StackCompiler.v`](../languages/rocq/StackCompiler.v)
+- [`languages/rocq/BrokenStackCompiler.v`](../languages/rocq/BrokenStackCompiler.v)
 
 Rocq が返すもの:
 
-- `coqc` による proof script の check
-- 将来 Iris / CompCert などに進むための CI 上の足場
+- source expression の構造帰納法で check 済みの意味保存 theorem
+- operand 順を逆転した compiler に対する `Some [0]` と `Some [3]` の型不一致
+- compiler / interpreter / DSL semantics を本格証明へ伸ばす足場

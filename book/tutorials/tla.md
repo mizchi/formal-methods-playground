@@ -142,3 +142,23 @@ P で実装に寄せる前に、TLA+ で抽象 protocol として検査するの
 - [`../../languages/tla/OrderCheckout.tla`](../../languages/tla/OrderCheckout.tla)
 - [`../../languages/tla/EventSourcing.tla`](../../languages/tla/EventSourcing.tla)
 - [`../../languages/tla/ActorMailbox.tla`](../../languages/tla/ActorMailbox.tla)
+
+## Quint で同じモデルを書く
+
+Quint は TLA の semantics を、静的型、`all` / `any`、`nondet` などの
+application engineer に馴染みやすい surface で書く言語である。
+この repo では `OrderCheckout` を両方で実装し、同じ TLC backend で
+safety と liveness を検査できるようにした。
+
+- [Quint 版と TLA+ 版の対比](../../languages/quint/README.md)
+- [Quint 版 `OrderCheckout.qnt`](../../languages/quint/OrderCheckout.qnt)
+- [TLA+ 版 `OrderCheckout.tla`](../../languages/tla/OrderCheckout.tla)
+
+## FizzBee で同じモデルを書く
+
+FizzBee は同じ temporal state machine を Python/Starlark 風の imperative な
+design pseudocode で書ける。`role` / RPC、非 atomic action の yield、fault injection、
+state/sequence diagram、model-based testing まで設計 model を伸ばしたい場合に向く。
+
+- [FizzBee / Quint / TLA+ の対比](../../languages/fizzbee/README.md)
+- [FizzBee 版 `OrderCheckout.fizz`](../../languages/fizzbee/OrderCheckout.fizz)

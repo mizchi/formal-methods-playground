@@ -9,6 +9,8 @@
 | --- | --- | --- | --- | --- |
 | Z3 / SMT-LIB | 入力に対する一瞬の判定、矛盾、等価性 | 時間、並行、liveness | `sat` と model witness | validator、feature flag、config、policy |
 | Alloy | entity / relation / graph の小さい world 探索 | 長い時間、fairness、大規模 trace | 具体的な関係 instance | RBAC、tenant、ownership、workflow、network reachability |
+| FizzBee | Python 風の distributed design pseudocode、role / RPC、非 atomic 処理 | 静的型、theorem proving、成熟した proof/module 資産 | action trace、state graph、sequence diagram | distributed design、fault injection、設計レビュー、model-based testing |
+| Quint | 型付きで実行可能な TLA-style 状態遷移 DSL | 単純な述語、TLAPS による theorem proving、高度な TLA+ 資産 | action trace（TLC / Apalache） | application workflow、retry、queue、protocol contract |
 | TLA+ | 状態遷移、全 interleaving、safety / liveness | 単純な述語検査、構造だけの関係モデル | action trace | retry、queue、outbox、crash recovery、distributed protocol |
 | P | typed message を投げ合う actor / protocol | 数式、config 矛盾、汎用 theorem proving | event schedule と monitor violation | service 間 protocol、worker、device/controller、actor workflow |
 | Dafny | 逐次コードの pre/postcondition と loop invariant | distributed protocol、既存 production code そのもの | failed obligation の位置 | parser、normalizer、pricing、business rule 関数 |
@@ -35,14 +37,16 @@ flowchart TD
   B -->|いいえ| C{entity と relation の構造か}
   C -->|はい| ALLOY[Alloy]
   C -->|いいえ| D{時間・順序・retry・crash が本質か}
-  D -->|はい| E{message actor に近いか}
-  E -->|はい| P[P]
-  E -->|いいえ| TLA[TLA+]
+  D -->|はい| E{何を設計の正本にするか}
+  E -->|Python 風の擬似コード・role・図・MBT| FIZZ[FizzBee]
+  E -->|typed message handler| P[P]
+  E -->|型付き TLA-style domain contract| QUINT[Quint]
+  E -->|proof・module・既存 TLA+ 資産| TLA[TLA+]
 
   D -->|いいえ| F{bounded でない普遍定理か}
-  F -->|はい| G{既存 ecosystem が必要か}
+  F -->|はい| G{mechanized semantics または既存 ecosystem が本質か}
   G -->|Lean / mathlib で足りる| LEAN[Lean 4]
-  G -->|CompCert / Iris などが必要| ROCQ[Rocq]
+  G -->|compiler semantics / CompCert / Iris| ROCQ[Rocq]
   F -->|security protocol| SEC[Tamarin / ProVerif]
   F -->|まだ曖昧| MODEL[まず述語・関係・状態・遷移に分解する]
 ```
@@ -69,10 +73,14 @@ flowchart LR
   REL --> Z3
 
   STATE --> TLA[TLA+]
+  STATE --> QUINT[Quint]
+  STATE --> FIZZ[FizzBee]
   STATE --> ALLOY
 
   MSG --> P[P]
   MSG --> TLA
+  MSG --> QUINT
+  MSG --> FIZZ
 
   CODE --> DAFNY
   CODE --> MOON
@@ -92,10 +100,10 @@ flowchart LR
 flowchart TB
   REVIEW[目視レビュー] -->|branch guard / validator| Z3[Z3]
   REVIEW -->|RBAC / tenant 図| ALLOY[Alloy]
-  REVIEW -->|async 設計会話| TLA[TLA+]
+  REVIEW -->|async 設計会話| TLA[TLA+ / Quint / FizzBee]
 
   TEST[テスト] -->|境界値表| Z3
-  TEST -->|mock 多めの protocol test| P[P]
+  TEST -->|mock 多めの protocol test| P[P / FizzBee MBT]
   TEST -->|loop / algorithm unit test| DAFNY[Dafny]
 
   DOC[仕様 docs] -->|期待仕様との矛盾| Z3
@@ -111,11 +119,15 @@ flowchart TB
 | 迷う組み合わせ | 選び方 |
 | --- | --- |
 | Z3 vs Alloy | 入力 predicate なら Z3。user / role / resource の関係グラフなら Alloy |
-| Alloy vs TLA+ | 構造の穴なら Alloy。順序や retry が bug を作るなら TLA+ |
-| TLA+ vs P | 抽象的な状態遷移なら TLA+。machine / event / handler として実装に寄せたいなら P |
+| Alloy vs FizzBee / Quint / TLA+ | 構造の穴なら Alloy。順序や retry が bug を作るなら temporal model |
+| FizzBee vs Quint | Python 風の逐次擬似コード、role/RPC、図、fault injection、MBT なら FizzBee。静的型と TLA semantics、REPL/test、TLC/Apalache なら Quint |
+| FizzBee vs TLA+ | 設計を実装者向け擬似コードと図で共有するなら FizzBee。TLAPS、高度な refinement、PlusCal、既存 module/tooling なら TLA+ |
+| Quint vs TLA+ | 型付きの domain contract、REPL、test を正本にするなら Quint。TLAPS、高度な module/refinement、既存 TLA+ 資産を直接使うなら TLA+ |
+| FizzBee vs P | design pseudocode と role/RPC、fault model、MBT なら FizzBee。typed machine/event/handler と code generation なら P |
+| FizzBee / Quint / TLA+ vs P | 抽象的な状態遷移と temporal property なら前者。machine / event / handler として実装に寄せたいなら P |
 | Dafny vs MoonBit prove | Dafny に写せるなら Dafny。MoonBit 実装に contract を同居させるなら MoonBit prove |
 | MoonBit prove vs Z3 | 実装契約を証明したいなら MoonBit prove。witness を出して仕様確認したいなら Z3 |
-| Lean vs Rocq | 一般的な型・数学なら Lean。CompCert / Iris など Rocq 資産が必要なら Rocq |
+| Lean vs Rocq | 一般的な型・数学なら Lean。compiler / interpreter の mechanized semantics、CompCert / Iris など Rocq 資産が本質なら Rocq |
 | Tamarin vs ProVerif | security protocol の攻撃 trace を設計レビューで見たいなら Tamarin。自動検証寄りなら ProVerif |
 
 ## skill 化するときの入力

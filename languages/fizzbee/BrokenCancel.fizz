@@ -1,0 +1,25 @@
+---
+deadlock_detection: false
+options:
+  max_actions: 2
+  max_concurrent_actions: 1
+---
+
+# Negative control: cancelling an unpaid order must not mark it as refunded.
+
+OrderState = enum('CART', 'REFUNDED', 'CANCELLED')
+
+
+action Init:
+    state = OrderState.CART
+    refunded = False
+
+
+atomic action BrokenCancel:
+    require state == OrderState.CART
+    state = OrderState.CANCELLED
+    refunded = True
+
+
+always assertion NoRefundWithoutRefundedState:
+    return not refunded or state == OrderState.REFUNDED

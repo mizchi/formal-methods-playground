@@ -70,7 +70,7 @@ while IFS= read -r markdown_file; do
     echo "unterminated mermaid block in $markdown_file" >&2
     exit 1
   fi
-done < <(rg -l '```mermaid' book README.md real-world-adoption.ja.md real-world-adoption.md || true)
+done < <(rg -l '```mermaid' book docs README.md real-world-adoption.ja.md real-world-adoption.md || true)
 
 if [ "$count" -eq 0 ]; then
   echo "No mermaid diagrams found."

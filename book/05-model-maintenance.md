@@ -15,7 +15,7 @@
 | --- | --- | --- |
 | 仕様 | docs、ADR、API contract、runbook、incident decision | 「policy missing は fail-close」 |
 | コード | 実装、テスト、設定、schema、ログ、trace | `if (!policy) return allow()` |
-| モデル | Z3/TLA+/P/Alloy/Dafny など、harness、期待結果、CI | `missingPolicy => allowed == false` |
+| モデル | Z3/FizzBee/Quint/TLA+/P/Alloy/Dafny など、harness、期待結果、CI | `missingPolicy => allowed == false` |
 
 drift の種類は 1 つに決めてから直す。
 

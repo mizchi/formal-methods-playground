@@ -42,16 +42,16 @@ recurring tells, each pointing at a tool:
 | --- | --- | --- |
 | a `match` / `if` cascade that resolves inputs into cases and rejects the rest (operand resolution, command authorization) | relation / case-exhaustiveness | Alloy, or Z3 for a pure predicate |
 | a clamp / fold / `min` pipeline enforcing a bound (a safety envelope, a rate limit) | arithmetic bound | Z3 |
-| an explicit state field advanced by rules (`status`, `wal_sequence`, a job lifecycle) | temporal state machine | TLA+ |
+| an explicit state field advanced by rules (`status`, `wal_sequence`, a job lifecycle) | temporal state machine | FizzBee for design pseudocode/roles, Quint for a typed domain contract, or TLA+ directly |
 | a persisted layout with fixed offsets/sizes (a wire format, a record on disk) | byte/layout math, round-trip | Z3 |
-| a durability sequence (`write` → `fsync` → `rename`, CAS + retry, recovery) | crash-consistency | TLA+ |
-| a time-keyed lookup or a counting/uniqueness assumption (latest-before, a `group by`, a `(k, t)` uniqueness) | relation / ordering | Alloy or TLA+ |
+| a durability sequence (`write` → `fsync` → `rename`, CAS + retry, recovery) | crash-consistency | FizzBee, Quint, or TLA+ |
+| a time-keyed lookup or a counting/uniqueness assumption (latest-before, a `group by`, a `(k, t)` uniqueness) | relation / ordering | Alloy, FizzBee, Quint, or TLA+ |
 | a comment that *admits* a hazard ("retry may duplicate", "hard to reproduce") | pre-located witness | whichever the shape above picks |
 
 Name the claim in one sentence; the shape picks the tool. When two
 tools fit, prefer the one whose *counterexample* is most readable to
-the owner — a dated TLC trace beats a flat Z3 model for anything
-temporal.
+the owner — a named temporal trace or FizzBee state/sequence diagram
+beats a flat Z3 model for anything temporal.
 
 ## 2. Anchor the model to the source: a provenance header
 

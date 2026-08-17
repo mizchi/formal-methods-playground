@@ -15,16 +15,39 @@ counter-example style, and effort cost become concrete.
 | [`languages/alloy/`](languages/alloy/) | Alloy 6 | finite-scope relational model finder |
 | [`languages/z3/`](languages/z3/) | Z3 | direct SMT checks for implementation-extracted predicates |
 | [`languages/tla/`](languages/tla/) | TLA+ (TLC / Apalache / TLAPS) | temporal logic for async / distributed |
+| [`languages/quint/`](languages/quint/) | Quint (TLC backend) | typed, executable TLA-style specifications |
+| [`languages/fizzbee/`](languages/fizzbee/) | FizzBee | Python-like distributed-system design specifications, visualization, and model checking |
 | [`languages/dafny/`](languages/dafny/) | Dafny | SMT-backed program verification |
 | [`languages/fstar/`](languages/fstar/) | F* | refinement types + SMT for verified implementation cores |
 | [`languages/lean/`](languages/lean/) | Lean 4 + mathlib4 | interactive theorem prover |
-| [`languages/rocq/`](languages/rocq/) | Rocq (née Coq) | older ITP, mature ecosystem |
+| [`languages/rocq/`](languages/rocq/) | Rocq (formerly Coq) | interactive proofs for compiler / semantics and a mature ecosystem |
 | [`languages/moonbit/`](languages/moonbit/) | MoonBit `moon prove` | Dafny-style annotations → Why3 → SMT |
 | [`usecases/terraform-reachability/`](usecases/terraform-reachability/) | Alloy applied | microservice reachability graph from terraform SGs |
 | [`usecases/wasmplane-route-placement/`](usecases/wasmplane-route-placement/) | Alloy applied | route snapshot placement bug witnesses and fixed-contract checks |
 | [`languages/p/`](languages/p/) | P language | actor-model state machines with built-in checker |
 
 ## Tool selection guide
+
+[`docs/personal-tool-selection.md`](docs/personal-tool-selection.md) —
+personal defaults for this repository: Alloy 6 for structure, Quint
+for behavior, and Lean 4 for durable unbounded theorems, with explicit
+escape hatches for other question shapes.
+
+[`docs/quint-ecosystem.md`](docs/quint-ecosystem.md) —
+how Quint LLM Kit, Choreo, Connect, ITF export, and Trace Explorer extend
+the workflow from model authoring through implementation conformance and
+counterexample review, including their trust boundaries and maturity.
+
+[`docs/quint-ecosystem-evaluation.md`](docs/quint-ecosystem-evaluation.md) —
+hands-on evaluation using the pinned official two-phase-commit examples:
+an 8-state Choreo/ITF trace, Connect positive and deliberately broken Rust
+implementations, terminal trace exploration, and a MoonBit runtime adapter that
+generates and replays both simulation and named-test traces.
+
+[`docs/rocq-vs-lean-program-verification.md`](docs/rocq-vs-lean-program-verification.md) —
+an attributed reading note on the Lean / Rocq boundary: native codata,
+extraction, program-verification ecosystems, proof boundaries, and the
+resulting repository decision.
 
 [`verification-tools.md`](verification-tools.md) — when to reach
 for which tool, organised by use case. Read this first if the
@@ -76,15 +99,19 @@ should have a top-of-file comment block with:
 | TLA+ | `languages/tla/OrderCheckout.tla` | async order state machine + safety + liveness; 20 states, depth 6 |
 | TLA+ | `languages/tla/EventSourcing.tla` | replay determinism + snapshot consistency on a payment ledger; 118 states, depth 5 |
 | TLA+ | `languages/tla/ActorMailbox.tla` | per-pair FIFO + bounded mailbox + eventual delivery under WF on Receive; 1,681 states, depth 13 |
+| Quint | `languages/quint/OrderCheckout.qnt` | typed restatement of the TLA+ checkout model; the same 20 states / depth 6, plus a broken-step witness |
+| Quint + MoonBit | [`mizchi/quint-connect-moonbit`](https://github.com/mizchi/quint-connect-moonbit) | standalone package `mizchi/quint_connect`; MoonBit launches Quint and replays 8 generated traces / 34 states plus a nested named-test trace, with negative controls for both paths |
+| FizzBee | `languages/fizzbee/OrderCheckout.fizz` | Python-like design restatement; 20 unique states, plus safety and no-fairness witnesses |
 | Dafny | `languages/dafny/checkout_form.dfy` | conditional form invariants + loop verification; 7 verified, 0 errors |
 | Dafny | `languages/dafny/rbac_screens.dfy` | same RBAC + screen-nav domain as the Alloy probe, proved universally over trace length; 12 verified, 0 errors |
 | F* | `languages/fstar/CheckoutForm.fst` | checkout-form constructors carry refinement contracts; invalid witnesses proved false with lemmas |
 | Lean | `languages/lean/Rbac.lean` | RBAC role-hierarchy monotonicity, universal over Permission |
+| Rocq | `languages/rocq/StackCompiler.v` | compiler correctness for every expression and initial stack; reversed-subtraction negative control |
+| Rocq | `languages/rocq/Rbac.v` | Leanとの最小構文比較として残す RBAC monotonicity probe |
 | MoonBit | `languages/moonbit/checkout_form/` | executable tests pass; `moon prove` succeeds with opam Why3 1.7.2 + Alt-Ergo 2.5.4; 5 goals proved |
 | Alloy applied | `usecases/terraform-reachability/` | 3-service stack + SG ingress edges; direct safety UNSAT, transitive surfaces proxy-chain path |
 | Alloy applied | `usecases/wasmplane-route-placement/` | wasmplane route snapshot placement bugs; legacy witnesses SAT, fixed-contract checks UNSAT |
 | P | `languages/p/PingPong/` | two-actor ping-pong + safety monitor; 1000 schedules, 0 bugs |
-| Rocq | `languages/rocq/Rbac.v` | RBAC role-hierarchy monotonicity smoke probe; revisit when a flagship library (CompCert / Iris) becomes load-bearing |
 
 See [`findings.md`](findings.md) for the comparative
 notes — surface readability, counter-example quality, and the

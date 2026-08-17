@@ -12,6 +12,13 @@ MC_*.cfg
 states/
 *.tla.bak
 
+# Quint (generated TLA+ / Apalache output)
+_apalache-out/
+
+# FizzBee (compiled spec + state-space explorer output)
+languages/fizzbee/*.json
+languages/fizzbee/out/
+
 # Dafny
 *.dll
 *.pdb
@@ -45,6 +52,7 @@ _opam/
 
 # MoonBit generated interface files
 *.generated.mbti
+.mooncakes/
 
 # editor
 .vscode/

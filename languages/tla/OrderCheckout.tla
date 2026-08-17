@@ -8,9 +8,8 @@
  * Properties exercised:
  *   - TypeOK              (invariant) state is always one of the
  *                          declared values
- *   - NoRefundWithoutPaid (safety)    a refund is only reachable via
- *                          the paid / shipped path; checkout cancel
- *                          alone never produces a refund
+ *   - RefundedOnlyInRefundedState (safety) the refunded flag is true only
+ *                          while the current state is refunded
  *   - PaymentResolves     (liveness)  with weak fairness on the
  *                          payment actions, a paymentPending state
  *                          eventually leaves
@@ -113,10 +112,9 @@ Spec ==
 
 \* ── Properties ───────────────────────────────────────────────────────
 
-\* Safety: refunded=TRUE only happens once we have entered the
-\* refunded state. Establishes that the refunded flag cannot be
-\* set on a cart that never reached paid / shipped.
-NoRefundWithoutPaid ==
+\* Safety: the refunded flag and the current state stay consistent.
+\* This property does not inspect the preceding payment history.
+RefundedOnlyInRefundedState ==
     refunded => state = "refunded"
 
 \* Liveness: paymentPending is not a terminal state. Eventually

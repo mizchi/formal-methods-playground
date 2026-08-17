@@ -18,12 +18,12 @@
 | --- | --- |
 | 実装から抜いた純粋述語を検査したい | [Z3 / SMT-LIB](z3.md) |
 | RBAC、tenant、ownership など関係を検査したい | [Alloy](alloy.md) |
-| retry、queue、crash、eventual を検査したい | [TLA+](tla.md) |
+| retry、queue、crash、eventual を検査したい | [FizzBee / Quint / TLA+](tla.md) |
 | actor / message protocol を実装に近く書きたい | [P](p.md) |
 | 逐次関数と loop invariant を証明したい | [Dafny](dafny.md) |
 | MoonBit 実装の contract を証明したい | [MoonBit prove](moonbit-prove.md) |
 | bounded ではない普遍定理を証明したい | [Lean 4](lean.md) |
-| 既存の成熟 proof ecosystem を使いたい | [Rocq](rocq.md) |
+| compiler semantics を証明する、または成熟 proof ecosystem を使いたい | [Rocq](rocq.md) |
 
 ## レシピの読み方
 

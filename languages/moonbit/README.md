@@ -1,6 +1,7 @@
 # languages/moonbit/
 
-Probes for MoonBit's `moon prove` formal verification.
+Probes for MoonBit's `moon prove` formal verification and for using
+MoonBit implementations with external formal-methods workflows.
 
 MoonBit ships a verification feature that translates code +
 `where { proof_* : ... }` annotations into Why3 (`.mlw`) source,
@@ -67,6 +68,7 @@ nix develop -c just check-with-prove
 | Dir | Topic |
 | --- | --- |
 | [`checkout_form/`](checkout_form/) | `max_of_two`, `safe_abs`, and an implementation-extracted checkout validator with `proof_ensure` post-conditions |
+| [`mizchi/quint-connect-moonbit`](https://github.com/mizchi/quint-connect-moonbit) | package `mizchi/quint_connect`。MoonBitからQuintを起動し、複数のsimulation traceとnested named-test traceを実装へreplayする独立runtime adapter |
 
 The checkout validator is intentionally mirrored in
 [`../languages/z3/checkout_form.smt2`](../languages/z3/checkout_form.smt2). The MoonBit

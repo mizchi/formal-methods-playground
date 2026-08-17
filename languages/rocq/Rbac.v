@@ -2,7 +2,7 @@
   Probe: RBAC role-hierarchy monotonicity in Rocq.
 
   Run:
-    coqc languages/rocq/Rbac.v
+    rocq compile languages/rocq/Rbac.v
 
   This mirrors the Lean RBAC probe at a small scale. The point is
   not to prefer Rocq for this example, but to keep the Rocq toolchain

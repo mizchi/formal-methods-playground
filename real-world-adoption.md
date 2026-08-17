@@ -30,8 +30,8 @@ Japanese version: [`real-world-adoption.ja.md`](real-world-adoption.ja.md).
 | Manual review of branch guards, validators, feature flags, and policy predicates | Direct solver check over the extracted predicate | Z3 / SMT-LIB | SAT/UNSAT plus optional witness |
 | Spreadsheet-style config sanity checks | Exhaustive consistency, reachability, and dead-config queries | Z3 or Alloy | Invalid config witness or proof of absence in scope |
 | Whiteboard diagrams for RBAC, ownership, tenancy, routing, and workflow states | Relational model with finite-scope counterexample search | Alloy | Concrete small instance showing the bug |
-| "We think every async path resolves" design discussion | Temporal model with safety and liveness invariants | TLA+ | Trace showing stuck, unsafe, or unfair behavior |
-| Actor/message protocol tests with many mocks | Executable state-machine model and schedule exploration | P | Reproducible event schedule |
+| "We think every async path resolves" design discussion | Temporal model with safety and liveness invariants | FizzBee, Quint, or TLA+ | Trace showing stuck, unsafe, or unfair behavior |
+| Actor/message protocol tests with many mocks | Executable state-machine model and schedule exploration | FizzBee MBT or P | Reproducible event schedule or model-driven implementation test |
 | Boundary-heavy unit tests for sequential logic | Pre/postconditions and loop invariants on code-like functions | Dafny / MoonBit `moon prove` | Verified obligations or exact failing assertion |
 | Hand-maintained claims about data-structure behavior | Abstract model plus representation invariants | MoonBit `moon prove`, Dafny, Why3 | API contract that implementation preserves the model |
 | "This refactor should be equivalent" confidence | Old-vs-new equivalence or difference query | Z3, Dafny, MoonBit `moon prove` | Proof of equivalence or input that separates versions |
@@ -48,13 +48,15 @@ ambiguous, or repeatedly wrong.
 | --- | --- | --- | --- |
 | Find bad inputs to a pure predicate | Z3 | The implementation already has a mostly pure decision function; you want witnesses | The property depends on event order or concurrency |
 | Check structural consistency | Alloy | The domain is entities and relations: roles, owners, tenants, routes, graph reachability | The real bug needs fairness, unbounded queues, or long-running time |
-| Check async safety | TLA+ | You need "nothing bad ever happens" across all action orderings | A finite relational model would show the same issue faster |
-| Check async liveness | TLA+ | You need "something good eventually happens" and fairness assumptions are load-bearing | The system has no meaningful progress property |
+| Keep an executable distributed design document | FizzBee | Engineers should own Python-like actions, roles/RPCs, diagrams, fault assumptions, and an MBT path | Static types, TLAPS, or mature TLA+ modules are load-bearing |
+| Keep a typed executable workflow / protocol contract | Quint | Application engineers should own types, actions, examples, and temporal properties as the domain source of truth | TLAPS, advanced refinement, or existing TLA+ modules are load-bearing |
+| Check async safety | FizzBee, Quint, or TLA+ | You need "nothing bad ever happens" across all action orderings | A finite relational model would show the same issue faster |
+| Check async liveness | FizzBee, Quint, or TLA+ | You need "something good eventually happens" and fairness assumptions are load-bearing | The system has no meaningful progress property |
 | Check actor protocols close to implementation | P | The system is naturally machines exchanging typed messages, and executable spec/codegen matters | You only need a design-level model |
 | Prove sequential code contracts | Dafny | You can write or mirror the function in Dafny and specify pre/post/invariants | The production code must stay in another language with no translation budget |
 | Prove MoonBit implementation contracts | MoonBit `moon prove` | The implementation is MoonBit; contracts and proof-only models can live beside code | You need Z3-style model extraction or temporal exploration |
 | Prove reusable math or type-level facts | Lean 4 | The theorem is universal over arbitrary future values, not a bounded scope | A bounded counterexample would answer the engineering question |
-| Reuse mature proof ecosystems | Rocq | You need CompCert, Iris, MetaCoq, or another Rocq-specific library | Lean/mathlib covers the theorem with less ceremony |
+| Prove mechanized semantics or reuse mature proof ecosystems | Rocq | Compiler/interpreter semantics or CompCert, Iris, MetaCoq, or another Rocq-specific library is load-bearing | Lean/mathlib covers the theorem with less ceremony |
 | Verify C without rewriting | CBMC / Frama-C | The codebase is C and bounded checks or ACSL annotations fit | You can isolate the logic into a cleaner pure model |
 | Verify Rust with ownership-aware specs | Verus | You want Rust-shaped code plus pre/post/ghost reasoning | The target is not Rust or the team cannot absorb a verifier subset |
 
@@ -63,7 +65,9 @@ ambiguous, or repeatedly wrong.
 | Artifact you want to leave behind | Best fit | Why |
 | --- | --- | --- |
 | CI validator for real config files | Z3 | Directly encodes config predicates and returns a stable exit code |
-| Counterexample for a design review | Alloy or TLA+ | Produces a concrete instance or trace people can discuss |
+| Counterexample for a design review | Alloy, FizzBee, Quint, or TLA+ | Produces a concrete instance, trace, or diagram people can discuss |
+| Executable visual distributed-system design | FizzBee | Keeps pseudocode, roles/RPCs, safety/liveness, diagrams, and an MBT path in one model |
+| Typed executable temporal domain contract | Quint | Keeps domain types, actions, examples, invariants, and liveness in one model |
 | Regression guard for a pure rule | Z3 or Dafny | Locks the rule after a bug is found |
 | Regression guard for MoonBit code | MoonBit `moon prove` | Keeps contract and implementation in the same package |
 | Executable protocol model | P | The spec is already state machines and messages |
@@ -76,12 +80,14 @@ ambiguous, or repeatedly wrong.
 | --- | --- | --- | --- | --- |
 | Z3 / SMT-LIB | Satisfiability, unsatisfiability, equivalence of first-order formulas over supported theories | Validators, feature flags, eligibility, wire compatibility, config reachability | High when `get-model` is used; otherwise SAT/UNSAT only | `languages/z3/checkout_form.smt2` |
 | Alloy 6 | Bounded relational facts and temporal assertions over small scopes | RBAC, ownership, tenant isolation, workflow reachability, graph-shaped infra | High; concrete relation instance and visualizable graph | `languages/alloy/app-rbac.als`, `languages/alloy/multi-tenant.als`, `usecases/terraform-reachability/` |
+| FizzBee | Python-like imperative actions, roles/RPCs, safety/liveness, and fault-aware distributed design | Distributed-system design docs, retries, queues, RPC workflows, resilience review, model-based testing | High; named trace, state graph, sequence diagram, and explorer | `languages/fizzbee/OrderCheckout.fizz` |
+| Quint | Typed executable TLA-style state transitions, safety, and liveness | Application workflows, retry/timeout logic, queues, protocol contracts | High; TLC/Apalache action trace, plus REPL/run/test workflows | `languages/quint/OrderCheckout.qnt` |
 | TLA+ / TLC | Safety and liveness over state transitions and action interleavings | Distributed protocols, retry loops, background jobs, event sourcing, queues | High; numbered execution trace with action names | `languages/tla/OrderCheckout.tla`, `languages/tla/ActorMailbox.tla` |
 | P | Safety over actor state machines and message schedules | Actor protocols, device/service protocols, generated state-machine code | High; reproducible schedule | `languages/p/PingPong/` |
 | Dafny | Sequential program contracts, loop invariants, algebraic datatypes, ghost state | Business-rule functions, parsers, normalizers, data transformations | Medium; source location and failed obligation | `languages/dafny/checkout_form.dfy`, `languages/dafny/rbac_screens.dfy` |
 | MoonBit `moon prove` | MoonBit function contracts, loop invariants, abstract models in `.mbtp`, representation invariants | MoonBit libraries, validators, finance/domain operations, data structures | Medium; proof obligation failure rather than model finder | `languages/moonbit/checkout_form/` |
 | Lean 4 | Universal theorems over inductive types, mathematical structures, executable definitions with proofs | Permission lattices, type-level laws, algorithms whose proof outlives an implementation | Low for bug hunting; high for final theorem confidence | `languages/lean/Rbac.lean` |
-| Rocq | Mature interactive proofs, program semantics, separation logic via Iris, compiler/kernel-grade proofs | Compiler correctness, concurrent data structures, mechanized semantics | Low for quick counterexamples; very high for proof artifacts | Not currently probed |
+| Rocq | Mature interactive proofs, program semantics, separation logic via Iris, compiler/kernel-grade proofs | Compiler correctness, concurrent data structures, mechanized semantics | Low for quick counterexamples; very high for proof artifacts | `languages/rocq/StackCompiler.v` |
 | Why3 | Verification-condition generation with multiple prover backends | Shared verification backend, algorithm proofs, hand-authored WhyML | Medium; depends on backend/prover reports | Used by MoonBit `moon prove` |
 | Verus | Rust-like program verification with ghost/spec code | Rust modules with ownership-sensitive invariants | Medium; verifier diagnostics | Not currently probed |
 | Tamarin / ProVerif | Symbolic security protocol secrecy/authentication | Login protocols, key exchange, token flows, adversarial message systems | High; attack trace | Not currently probed |
@@ -94,8 +100,10 @@ formal checks:
 
 1. Extract pure predicates and run Z3 against real examples.
 2. Model structural domain rules in Alloy and collect counterexamples.
-3. Move async protocols that survived Alloy into TLA+ only when order,
-   fairness, or liveness becomes load-bearing.
+3. Move async protocols that survived Alloy into FizzBee when a
+   Python-like visual design model and MBT path should be the source of
+   truth, Quint when a typed executable domain contract is preferred,
+   or TLA+ directly when its proof/tool ecosystem is load-bearing.
 4. Put code-level contracts on new sequential logic in Dafny or
    MoonBit `moon prove`.
 5. Escalate to Lean / Rocq only for reusable theorems or proof

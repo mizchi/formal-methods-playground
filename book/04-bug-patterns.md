@@ -28,10 +28,10 @@ lock:
 | --- | --- | --- | --- |
 | config / policy の無矛盾性 | `exists bad input?` / `old == new?` | dead config、過許可、変更差分 | Z3 / SMT |
 | 認可・関係モデル | `forbidden reachable?` | tenant 越境、role 例外漏れ、deny-all | Alloy / SMT |
-| 分散・並行 state machine | `always invariant` / `eventually` | crash/retry race、lost update、stuck | TLA+ |
+| 分散・並行 state machine | `always invariant` / `eventually` | crash/retry race、lost update、stuck | FizzBee / Quint / TLA+ |
 | event-driven protocol | `every event handled` / monitor safety | unhandled event、永遠に deferred、順序依存 | P |
 | schedule robustness | `all schedules same observable result` | thread/order 依存、UI/event race | DPOR / model checking |
-| log / trace conformance | `observed trace refines model` | 実装がモデル外の順序を出す、仕様漏れ | TLA+ / P / LTL mining |
+| log / trace conformance | `observed trace refines model` | 実装がモデル外の順序を出す、仕様漏れ | FizzBee MBT / Quint / TLA+ / P / LTL mining |
 | code-level contract | `pre -> post` / no panic | off-by-one、overflow、panic、loop invariant 不足 | Dafny / MoonBit prove / Verus |
 | C/C++ bounded safety | `assert never fails within bound` | buffer overflow、pointer error、UB、assert violation | CBMC / Kani |
 | model-code equivalence | `implementation == executable model` | parser/validator/authorizer の意味ズレ | Lean/Dafny + differential testing |
@@ -467,7 +467,7 @@ proof / model check / symbolic analysis を CI に置き、実装や仕様が変
 2. claim を `allowed / forbidden / eventually / never / equivalent / reachable / invariant`
    のどれかに分類する。
 3. witness の形を決める。入力、関係 instance、event trace、log trace、proof failure。
-4. 一番小さい道具を選ぶ。predicate なら Z3、関係なら Alloy/SMT、時間なら TLA+/P、
+4. 一番小さい道具を選ぶ。predicate なら Z3、関係なら Alloy/SMT、時間なら FizzBee/Quint/TLA+/P、
    関数 contract なら Dafny/MoonBit/Verus、security protocol なら Tamarin/ProVerif。
 5. 成立を証明したいのか、反例が欲しいのかを決める。
 6. machine result をドメイン語に戻す。
