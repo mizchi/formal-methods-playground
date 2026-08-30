@@ -126,6 +126,7 @@ repo 内の例:
 
 - [`languages/dafny/checkout_form.dfy`](../languages/dafny/checkout_form.dfy)
 - [`languages/dafny/rbac_screens.dfy`](../languages/dafny/rbac_screens.dfy)
+- [`languages/dafny/dijkstra.dfy`](../languages/dafny/dijkstra.dfy)
 - [`languages/moonbit/checkout_form/`](../languages/moonbit/checkout_form/)
 - [`languages/moonbit/p2p_game_protocol/`](../languages/moonbit/p2p_game_protocol/)
 - [`languages/moonbit/MOON_PROVE_CAPABILITIES.md`](../languages/moonbit/MOON_PROVE_CAPABILITIES.md)

@@ -60,7 +60,23 @@ check-fizzbee:
     ./scripts/check-fizzbee.sh
 
 check-dafny:
-    dafny verify languages/dafny/checkout_form.dfy languages/dafny/rbac_screens.dfy
+    dafny verify languages/dafny/checkout_form.dfy languages/dafny/rbac_screens.dfy languages/dafny/dijkstra.dfy
+
+translate-dafny-dijkstra: check-dafny
+    mkdir -p build/dafny
+    dafny translate js languages/dafny/dijkstra.dfy -o build/dafny/dijkstra.js --include-runtime --no-verify
+    dafny translate go languages/dafny/dijkstra.dfy -o build/dafny/dijkstra.go --include-runtime --no-verify
+
+run-dafny-dijkstra-js: translate-dafny-dijkstra
+    pnpm add --dir build/dafny --save-exact bignumber.js@11.1.5
+    node build/dafny/dijkstra.js
+
+run-dafny-dijkstra-go: translate-dafny-dijkstra
+    cd build/dafny/dijkstra-go && env GO111MODULE=off GOPATH="$PWD" go run src/dijkstra.go
+
+benchmark-dafny-dijkstra-js: translate-dafny-dijkstra
+    pnpm add --dir build/dafny --save-exact bignumber.js@11.1.5
+    node scripts/benchmark-dafny-dijkstra-js.mjs
 
 check-fstar:
     fstar.exe languages/fstar/CheckoutForm.fst

@@ -101,6 +101,12 @@
             # SMT-backed program verifier
             dafny
 
+            # Dafny JavaScript / Go code-generation targets
+            nodejs_24
+            pnpm
+            go
+            gotools
+
             # Proof-oriented programming language: refinement types + SMT + tactics
             fstar
 

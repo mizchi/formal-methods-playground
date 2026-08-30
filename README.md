@@ -49,6 +49,11 @@ an attributed reading note on the Lean / Rocq boundary: native codata,
 extraction, program-verification ecosystems, proof boundaries, and the
 resulting repository decision.
 
+[`docs/dafny-code-generation.md`](docs/dafny-code-generation.md) —
+how verified Dafny code translates to JavaScript / Go, what appears in the
+generated artifacts, bundle and performance measurements, Rust backend status,
+and the design and CI practices needed around the generated core.
+
 [`verification-tools.md`](verification-tools.md) — when to reach
 for which tool, organised by use case. Read this first if the
 question is "which one should I pick for problem X" rather than
@@ -104,6 +109,7 @@ should have a top-of-file comment block with:
 | FizzBee | `languages/fizzbee/OrderCheckout.fizz` | Python-like design restatement; 20 unique states, plus safety and no-fairness witnesses |
 | Dafny | `languages/dafny/checkout_form.dfy` | conditional form invariants + loop verification; 7 verified, 0 errors |
 | Dafny | `languages/dafny/rbac_screens.dfy` | same RBAC + screen-nav domain as the Alloy probe, proved universally over trace length; 12 verified, 0 errors |
+| Dafny | `languages/dafny/dijkstra.dfy` | immutable reference + mutable-array Dijkstra; ghost path witnesses and universal shortest-distance proof; translates to JS / Go |
 | F* | `languages/fstar/CheckoutForm.fst` | checkout-form constructors carry refinement contracts; invalid witnesses proved false with lemmas |
 | Lean | `languages/lean/Rbac.lean` | RBAC role-hierarchy monotonicity, universal over Permission |
 | Rocq | `languages/rocq/StackCompiler.v` | compiler correctness for every expression and initial stack; reversed-subtraction negative control |
