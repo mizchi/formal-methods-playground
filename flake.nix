@@ -20,6 +20,10 @@
       url = "github:quint-co/quint-trace-explorer/d6b3d1fddea79f93bb8cca9fbc70b508e49e8e48";
       flake = false;
     };
+    lean4Source = {
+      url = "github:leanprover/lean4/68218e876d2a38b1985b8590fff244a83c321783";
+      flake = false;
+    };
   };
 
   outputs = {
@@ -30,6 +34,7 @@
     choreo,
     quintConnect,
     quintTraceExplorer,
+    lean4Source,
   }:
     flake-utils.lib.eachDefaultSystem (system:
       let
@@ -117,6 +122,12 @@
             # Lean 4 toolchain manager (lake / lean handled per-project)
             elan
 
+            # Lean-generated C -> freestanding WebAssembly toolchain
+            llvmPackages.clang-unwrapped
+            lld
+            wabt
+            wasmtime
+
             # Z3 + CVC5 for direct SMT experiments
             z3
             cvc5
@@ -170,6 +181,13 @@
             export DOTNET_ROOT=${pkgs.dotnet-sdk_8}/share/dotnet
             export DOTNET_CLI_TELEMETRY_OPTOUT=1
 
+            # Use the unwrapped compiler here: the normal Nix clang wrapper
+            # rejects cross-target builds without an explicit cross stdenv.
+            export LEAN_WASM_CLANG=${pkgs.llvmPackages.clang-unwrapped}/bin/clang
+            export LEAN_WASM_LD=${pkgs.lld}/bin/wasm-ld
+            export LEAN_WASM_OBJDUMP=${pkgs.wabt}/bin/wasm-objdump
+            export LEAN_WASM_RUNTIME=${pkgs.wasmtime}/bin/wasmtime
+
             # Pinned upstream sources used by `just evaluate-quint-ecosystem`.
             export QUINT_EVAL_LLM_KIT_SRC=${quintLlmKit}
             export QUINT_EVAL_CHOREO_SRC=${choreo}
@@ -185,6 +203,8 @@
             echo "  fstar  : $(fstar.exe --version 2>&1 | head -1 || echo not-found)"
             echo "  rocq   : $(rocq -v 2>&1 | head -1 || echo not-found)"
             echo "  elan   : $(elan --version 2>&1 | head -1 || echo not-found)"
+            echo "  wasm32 : $($LEAN_WASM_CLANG --version 2>&1 | head -1 || echo not-found)"
+            echo "  wasmtime: $($LEAN_WASM_RUNTIME --version 2>&1 | head -1 || echo not-found)"
             echo "  z3     : $(z3 --version 2>&1 | head -1 || echo not-found)"
             echo "  cvc5   : $(cvc5 --version 2>&1 | head -1 || echo not-found)"
             echo "  just   : $(just --version 2>&1 | head -1 || echo not-found)"
@@ -196,6 +216,34 @@
             echo "  moon   : $(moon version 2>&1 | head -1 || echo not-installed)"
             echo "  dotnet : $(dotnet --version 2>&1 | head -1 || echo not-found)"
             echo "  P      : $(p --version 2>&1 | head -1 || echo 'not-installed (run: dotnet tool install --global P)')"
+          '';
+        };
+
+        # Kept separate because Emscripten adds roughly 2 GiB of unpacked
+        # dependencies and the runtime-backed build downloads patched libuv.
+        devShells.emscripten = pkgs.mkShell {
+          packages = with pkgs; [
+            elan
+            nodejs_24
+            emscripten
+            cmake
+            gnumake
+            patch
+            git
+            just
+            wabt
+          ];
+
+          shellHook = ''
+            export LEAN4_WASM_SOURCE=${lean4Source}
+            export LEAN_WASM_EMCC=${pkgs.emscripten}/bin/emcc
+            export LEAN_WASM_EMXX=${pkgs.emscripten}/bin/em++
+            export LEAN_WASM_OBJDUMP=${pkgs.wabt}/bin/wasm-objdump
+
+            echo "formal-methods-playground Emscripten devShell"
+            echo "  lean : $(lean --version 2>&1 | head -1 || echo not-found)"
+            echo "  emcc : $($LEAN_WASM_EMCC --version 2>&1 | head -1 || echo not-found)"
+            echo "  node : $(node --version 2>&1 | head -1 || echo not-found)"
           '';
         };
       });

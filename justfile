@@ -5,7 +5,7 @@ default:
 
 check: test-moonbit check-z3
 
-check-ci: check-z3 check-alloy check-tla check-quint check-fizzbee check-dafny check-fstar check-lean check-rocq check-mermaid test-moonbit check-p
+check-ci: check-z3 check-alloy check-tla check-quint check-fizzbee check-dafny check-fstar check-lean test-lean-wasm check-rocq check-mermaid test-moonbit check-p
 
 check-with-prove: check prove-moonbit
 
@@ -18,6 +18,9 @@ tool-versions:
     dafny --version
     fstar.exe --version
     lean --version
+    "$LEAN_WASM_CLANG" --version | head -1
+    "$LEAN_WASM_LD" --version
+    "$LEAN_WASM_RUNTIME" --version
     rocq -v | head -1
     mmdc --version
     moon version
@@ -83,6 +86,38 @@ check-fstar:
 
 check-lean:
     lean languages/lean/Rbac.lean
+    lean languages/lean/wasm/LeanWasm.lean
+    lean languages/lean/wasm/LeanWasmRuntime.lean
+
+build-lean-wasm:
+    ./scripts/build-lean-wasm.sh
+
+inspect-lean-wasm: build-lean-wasm
+    "$LEAN_WASM_OBJDUMP" -x build/lean-wasm/lean_wasm.wasm
+
+run-lean-wasm: build-lean-wasm
+    "$LEAN_WASM_RUNTIME" run --invoke lean_wasm_add build/lean-wasm/lean_wasm.wasm 20 22
+
+test-lean-wasm: build-lean-wasm
+    node scripts/test-lean-wasm.mjs build/lean-wasm/lean_wasm.wasm
+
+# Run these inside `nix develop .#emscripten`.
+build-lean-wasm-emscripten:
+    ./scripts/build-lean-wasm-emscripten.sh
+
+test-lean-wasm-emscripten: build-lean-wasm-emscripten
+    node scripts/test-lean-wasm-emscripten.mjs "$PWD/build/lean-wasm-emscripten/LeanWasm.mjs"
+
+# Network-heavy on the first run: builds Lean's patched wasm32 runtime and libuv.
+build-lean-wasm-emscripten-runtime:
+    ./scripts/build-lean-wasm-emscripten-runtime.sh
+
+test-lean-wasm-emscripten-runtime: build-lean-wasm-emscripten-runtime
+    node scripts/test-lean-wasm-emscripten-runtime.mjs "$PWD/build/lean-wasm-emscripten/LeanWasmRuntime.mjs"
+
+inspect-lean-wasm-emscripten: build-lean-wasm-emscripten build-lean-wasm-emscripten-runtime
+    "$LEAN_WASM_OBJDUMP" -x build/lean-wasm-emscripten/LeanWasm.wasm
+    "$LEAN_WASM_OBJDUMP" -x build/lean-wasm-emscripten/LeanWasmRuntime.wasm
 
 check-rocq:
     ./scripts/check-rocq.sh

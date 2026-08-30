@@ -35,6 +35,23 @@
         "type": "github"
       }
     },
+    "lean4Source": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1781386375,
+        "narHash": "sha256-up4Juc/IyMuggGLMSDgwYEOoMk/K5U8NI0jzeAKqhO0=",
+        "owner": "leanprover",
+        "repo": "lean4",
+        "rev": "68218e876d2a38b1985b8590fff244a83c321783",
+        "type": "github"
+      },
+      "original": {
+        "owner": "leanprover",
+        "repo": "lean4",
+        "rev": "68218e876d2a38b1985b8590fff244a83c321783",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1778458615,
@@ -106,6 +123,7 @@
       "inputs": {
         "choreo": "choreo",
         "flake-utils": "flake-utils",
+        "lean4Source": "lean4Source",
         "nixpkgs": "nixpkgs",
         "quintConnect": "quintConnect",
         "quintLlmKit": "quintLlmKit",

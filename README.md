@@ -54,6 +54,11 @@ how verified Dafny code translates to JavaScript / Go, what appears in the
 generated artifacts, bundle and performance measurements, Rust backend status,
 and the design and CI practices needed around the generated core.
 
+[`docs/lean-c-wasm.md`](docs/lean-c-wasm.md) —
+the verified Lean → generated C → freestanding WebAssembly probe, including
+the scalar ABI restriction, Emscripten scalar/runtime-backed routes, generated
+output, bundle/runtime size, upstream patch, and trust boundary.
+
 [`verification-tools.md`](verification-tools.md) — when to reach
 for which tool, organised by use case. Read this first if the
 question is "which one should I pick for problem X" rather than
@@ -112,6 +117,7 @@ should have a top-of-file comment block with:
 | Dafny | `languages/dafny/dijkstra.dfy` | immutable reference + mutable-array Dijkstra; ghost path witnesses and universal shortest-distance proof; translates to JS / Go |
 | F* | `languages/fstar/CheckoutForm.fst` | checkout-form constructors carry refinement contracts; invalid witnesses proved false with lemmas |
 | Lean | `languages/lean/Rbac.lean` | RBAC role-hierarchy monotonicity, universal over Permission |
+| Lean + Wasm | `languages/lean/wasm/` | verified scalar and `String` cores → C → freestanding/Emscripten Wasm; Node execution tests |
 | Rocq | `languages/rocq/StackCompiler.v` | compiler correctness for every expression and initial stack; reversed-subtraction negative control |
 | Rocq | `languages/rocq/Rbac.v` | Leanとの最小構文比較として残す RBAC monotonicity probe |
 | MoonBit | `languages/moonbit/checkout_form/` | executable tests pass; `moon prove` succeeds with opam Why3 1.7.2 + Alt-Ergo 2.5.4; 5 goals proved |
