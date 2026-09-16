@@ -36,6 +36,8 @@ lock:
 | C/C++ bounded safety | `assert never fails within bound` | buffer overflow、pointer error、UB、assert violation | CBMC / Kani |
 | model-code equivalence | `implementation == executable model` | parser/validator/authorizer の意味ズレ | Lean/Dafny + differential testing |
 | security protocol | secrecy / authentication / freshness | replay、MITM、鍵漏れ、認証すり替え | Tamarin / ProVerif |
+| replica convergence | `same delivered set => same state` | offline sync の divergence、LWW の tie、clock 依存 | Alloy / Isabelle / Rocq |
+| version boundary compatibility | `old writes => new accepts` かつ逆向き | rolling deploy 中の reject、unknown enum の誤解釈 | Z3 / SMT |
 
 ## 1. Config / policy の無矛盾性
 
@@ -148,6 +150,16 @@ EventuallyProcessed ==
 - distributed lock
 - leader election
 - cache invalidation
+
+この型の亜種で、アプリ開発者が一番踏みやすいのが **write skew** である。
+2 つの transaction が「集計を読んで、別々の行を書く」とき、書き込みが
+重ならないため store は競合を検出できない。snapshot isolation では両方 commit し、
+「席数 <= プラン上限」のような複数行にまたがる invariant だけが壊れる。
+transaction で囲んでも、atomic increment でも直らないのが特徴で、
+読み取り集合の再検査（SSI）か、競合を人工的に作る行ロックが要る。
+repo 内の例: [`usecases/write-skew-seat-limit/`](../usecases/write-skew-seat-limit/)。
+宣言された isolation を本番の履歴で検算する側は Elle 系のツールが担う
+（[arXiv:2003.10554](https://arxiv.org/abs/2003.10554)）。
 
 AWS の TLA+ 事例では、S3 や DynamoDB などの分散アルゴリズムで、
 通常の設計レビューやテストでは踏みにくい長い trace のバグが見つかっている。
@@ -461,6 +473,91 @@ and observedTrace refines Model
 proof / model check / symbolic analysis を CI に置き、実装や仕様が変わったら
 どの claim が変わったかをドメイン語で報告する必要がある。
 
+## 12. Replica convergence
+
+自然言語の形:
+
+```text
+オフラインで編集した 2 台が、同期後に同じ内容になるか?
+同じ更新集合を受け取った replica は、到着順によらず同じ状態になるか?
+merge 関数は commutative / associative / idempotent か?
+```
+
+形式化:
+
+```text
+forall p, q:
+  delivered(p) == delivered(q) => state(p) == state(q)
+```
+
+これは strong eventual consistency の定義そのもので、
+「merge の勝敗関係が全順序である（= どの inbox にも一意の最大元がある）」
+と言い換えると、小さい関係モデルの問いになる。
+
+見つかるバグ:
+
+- last-writer-wins の tie が非決定で、2 台が別の値を保持し続ける
+- tiebreak が replica id を含まず、同時刻編集で発散する
+- 粗い wall clock が同一 tick で 2 回打刻し、tiebreak の前提が崩れる
+- per-document LWW が、別フィールドへの並行編集を捨てる
+
+転用先:
+
+- local-first / offline 対応アプリ
+- モバイルの送信キュー
+- 楽観的更新の UI
+- multi-region active-active
+- 設定同期
+
+repo 内の例:
+[`usecases/offline-sync-convergence/`](../usecases/offline-sync-convergence/)。
+bounded scope の Alloy で発散 witness を出す。
+unbounded 側の対応物は Gomes らの Isabelle/HOL による op-based CRDT の
+SEC 証明で、network model を形式化に含めている点が要点である
+（[arXiv:1707.01747](https://arxiv.org/abs/1707.01747)）。
+
+## 13. Version boundary compatibility
+
+自然言語の形:
+
+```text
+デプロイ中に新旧が同居するとき、片方が書いたものを他方が読めるか?
+新しい enum 値を古いコードはどう扱うか?
+必須にしたフィールドを、まだ書いていない古いコードのデータはどうなるか?
+```
+
+形式化:
+
+```text
+forall record:
+  v1Writes(record) => v2Accepts(record)
+  and v2Writes(record) => v1Accepts(record)
+  and v1Accepts(record) => v1Acts(record) is safe
+```
+
+3 行目が抜けやすい。互換性ツールは「パースできるか」までしか見ないが、
+古いコードが未知の値をパースした後に何をするかは別問題である。
+
+見つかるバグ:
+
+- 必須化したフィールドが無い旧データで新 reader が落ちる
+- canary が書いた新 enum を旧 pod が dead-letter する
+- unknown を fail-open に倒して、返金済み注文を再課金する
+- expand / contract のフェーズを飛ばす
+
+転用先:
+
+- rolling deploy
+- protobuf / Avro / JSON Schema の evolution
+- event log / outbox の replay
+- 強制更新できないモバイルクライアント
+- DB カラムの expand → migrate → contract
+
+repo 内の例:
+[`usecases/schema-evolution/`](../usecases/schema-evolution/)。
+この型は「変更そのものが検査対象」なので、
+[6 章](06-timing.md) の T3 に置くのが一番安い。
+
 ## パターンを案件に転用する手順
 
 1. 仕様文やコードから claim を 1 つ抜く。
@@ -472,6 +569,9 @@ proof / model check / symbolic analysis を CI に置き、実装や仕様が変
 5. 成立を証明したいのか、反例が欲しいのかを決める。
 6. machine result をドメイン語に戻す。
 7. 意図なら仕様化し、意図しないならバグとして修正し、CI に lock する。
+8. **いつ問うか**を決める。同じ claim でも設計時・CI・移行時・運用時で
+   コストと得られる情報が変わる。[6 章](06-timing.md) の
+   パターン x タイミングの表を使う。
 
 ## 参考文献・事例
 
@@ -519,3 +619,13 @@ proof / model check / symbolic analysis を CI に置き、実装や仕様が変
   arXiv:2606.19937.
   Dolev-Yao attacker、Tamarin、unbounded protocol verification の整理。
   <https://arxiv.org/html/2606.19937v1>
+- Kyle Kingsbury and Peter Alvaro, "Elle: Inferring Isolation Anomalies from
+  Experimental Observations", arXiv:2003.10554.
+  DB の履歴から cycle を検出し、G0 / G1a / G1b / G1c / G-single / G2 の
+  isolation 異常を短い witness として出す。宣言された isolation を実測で検算する側。
+  <https://arxiv.org/abs/2003.10554>
+- Victor B. F. Gomes et al., "Verifying Strong Eventual Consistency in
+  Distributed Systems", arXiv:1707.01747.
+  op-based CRDT の strong eventual consistency を Isabelle/HOL で、
+  network model を形式化に含めて証明した枠組み。
+  <https://arxiv.org/abs/1707.01747>

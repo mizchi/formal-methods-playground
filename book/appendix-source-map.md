@@ -10,8 +10,9 @@ GitBook 化するときは、既存ファイルを次のように統合する。
 | 3. やりたいことからツールを選ぶ | [`verification-tools.md`](../verification-tools.md), [`real-world-adoption.ja.md`](../real-world-adoption.ja.md) |
 | 4. ツールごとにできること | [`verification-tools.md`](../verification-tools.md), [`languages/moonbit/MOON_PROVE_CAPABILITIES.md`](../languages/moonbit/MOON_PROVE_CAPABILITIES.md) |
 | 4. ツールの得意不得意マップ | [`real-world-adoption.ja.md`](../real-world-adoption.ja.md), [`verification-tools.md`](../verification-tools.md) |
-| 5. 実例 | [`languages/z3/`](../languages/z3/), [`languages/alloy/`](../languages/alloy/), [`languages/tla/`](../languages/tla/), [`languages/quint/`](../languages/quint/), [`languages/fizzbee/`](../languages/fizzbee/), [`languages/p/`](../languages/p/), [`languages/dafny/`](../languages/dafny/), [`languages/moonbit/`](../languages/moonbit/), [`languages/lean/`](../languages/lean/), [`languages/rocq/`](../languages/rocq/) |
-| 6. 言語別チュートリアルとレシピ | [`languages/z3/README.md`](../languages/z3/README.md), [`languages/alloy/README.md`](../languages/alloy/README.md), [`languages/quint/README.md`](../languages/quint/README.md), [`languages/fizzbee/README.md`](../languages/fizzbee/README.md), [`languages/p/PingPong/README.md`](../languages/p/PingPong/README.md), [`languages/moonbit/README.md`](../languages/moonbit/README.md), 各 probe |
+| 6. いつ差し込むか | [`extraction-playbook.md`](../extraction-playbook.md), [`usecases/`](../usecases/), arXiv（章末の参考文献） |
+| 7. 実例 | [`languages/z3/`](../languages/z3/), [`languages/alloy/`](../languages/alloy/), [`languages/tla/`](../languages/tla/), [`languages/quint/`](../languages/quint/), [`languages/fizzbee/`](../languages/fizzbee/), [`languages/p/`](../languages/p/), [`languages/dafny/`](../languages/dafny/), [`languages/moonbit/`](../languages/moonbit/), [`languages/lean/`](../languages/lean/), [`languages/rocq/`](../languages/rocq/) |
+| 9. 言語別チュートリアルとレシピ | [`languages/z3/README.md`](../languages/z3/README.md), [`languages/alloy/README.md`](../languages/alloy/README.md), [`languages/quint/README.md`](../languages/quint/README.md), [`languages/fizzbee/README.md`](../languages/fizzbee/README.md), [`languages/p/PingPong/README.md`](../languages/p/PingPong/README.md), [`languages/moonbit/README.md`](../languages/moonbit/README.md), 各 probe |
 
 ## 未整理のまま残すべきもの
 

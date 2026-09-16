@@ -11,6 +11,10 @@ MC_*.tla
 MC_*.cfg
 states/
 *.tla.bak
+# TLC writes a trace-exploration spec next to the module on every violation;
+# the breaking variants in usecases/ are meant to be run by hand, so ignore it
+*_TTrace_*.tla
+*_TTrace_*.bin
 
 # Quint (generated TLA+ / Apalache output)
 _apalache-out/
