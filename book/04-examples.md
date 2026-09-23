@@ -111,6 +111,7 @@ repo 内の例:
 - [`usecases/cloud-config-verification/`](../usecases/cloud-config-verification/)
 - [`usecases/idempotency-key/`](../usecases/idempotency-key/) — safety と liveness が別々に壊れる例
 - [`usecases/write-skew-seat-limit/`](../usecases/write-skew-seat-limit/) — isolation level を定数にして 3 設計を比べる例
+- [`languages/tla/SeatLimitTrace.tla`](../languages/tla/SeatLimitTrace.tla) — 同じモデルに本番ログを流して、主張した isolation level と実測を突き合わせる例（T5）
 
 temporal model checker が返すもの:
 

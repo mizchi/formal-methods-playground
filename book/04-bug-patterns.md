@@ -160,6 +160,9 @@ transaction で囲んでも、atomic increment でも直らないのが特徴で
 repo 内の例: [`usecases/write-skew-seat-limit/`](../usecases/write-skew-seat-limit/)。
 宣言された isolation を本番の履歴で検算する側は Elle 系のツールが担う
 （[arXiv:2003.10554](https://arxiv.org/abs/2003.10554)）。
+同じ repo の [`SeatLimitTrace.tla`](../languages/tla/SeatLimitTrace.tla) は、
+その検算を専用ツールではなく **設計時と同じモデル**でやる形を示している
+（[6 章 T5](06-timing.md)）。
 
 AWS の TLA+ 事例では、S3 や DynamoDB などの分散アルゴリズムで、
 通常の設計レビューやテストでは踏みにくい長い trace のバグが見つかっている。
@@ -271,6 +274,12 @@ observedTrace in Behaviors(Model)
 - API audit log
 - migration replay
 - model-code drift guard
+
+repo 内の例: [`languages/tla/SeatLimitTrace.tla`](../languages/tla/SeatLimitTrace.tla)。
+設計時モデルを `INSTANCE` して本番ログを 1 行ずつ流すだけなので探索が無く、
+`ログ長 + 1` 状態で終わる。この型の probe は「モデルを新しく書く」のではなく
+**既にあるモデルの使い回し**になるのが普通で、そうならないなら
+T0 のモデルが実装の語彙から離れすぎているというサインである。
 
 LTL specification mining の survey は、desired / undesired traces から
 temporal property を学習する研究を整理している。SysMoBench も、

@@ -26,7 +26,7 @@ counter-example style, and effort cost become concrete.
 | [`usecases/wasmplane-route-placement/`](usecases/wasmplane-route-placement/) | Alloy applied | route snapshot placement bug witnesses and fixed-contract checks |
 | [`usecases/offline-sync-convergence/`](usecases/offline-sync-convergence/) | Alloy applied | offline-first LWW merge: strong eventual consistency and its clock assumption |
 | [`usecases/idempotency-key/`](usecases/idempotency-key/) | TLA+ applied | at-least-once retry: no double side effect, and no wedged key |
-| [`usecases/write-skew-seat-limit/`](usecases/write-skew-seat-limit/) | TLA+ applied | write skew on a seat limit under snapshot isolation |
+| [`usecases/write-skew-seat-limit/`](usecases/write-skew-seat-limit/) | TLA+ applied | write skew on a seat limit under snapshot isolation, plus a production-log replay against the same model |
 | [`usecases/schema-evolution/`](usecases/schema-evolution/) | Z3 applied | rolling-deploy compatibility in both directions |
 | [`languages/p/`](languages/p/) | P language | actor-model state machines with built-in checker |
 
@@ -137,6 +137,7 @@ should have a top-of-file comment block with:
 | P | `languages/p/PingPong/` | two-actor ping-pong + safety monitor; 1000 schedules, 0 bugs |
 | TLA+ applied | `usecases/idempotency-key/` | idempotency keys under retry; correct design green (16 states, depth 8), late-store witness `charges = 2`, blocking witness wedges at `reserved` |
 | TLA+ applied | `usecases/write-skew-seat-limit/` | seat limit under SI/SSI/row lock; SERIALIZABLE and FOR UPDATE green, snapshot isolation witnesses `members = 2` on a 1-seat plan |
+| TLA+ applied | `usecases/write-skew-seat-limit/` (T5 replay) | production logs replayed through the same model; two logs green, incident log refused at SERIALIZABLE and over the limit at SI |
 | Alloy applied | `usecases/offline-sync-convergence/` | LWW merge convergence; 4 checks UNSAT, 4 witnesses SAT (naive tie, no unique winner, repeated stamp, non-vacuity) |
 | Z3 applied | `usecases/schema-evolution/` | rolling-deploy compatibility both directions; `sat, sat, unsat, unsat, sat, unsat` |
 

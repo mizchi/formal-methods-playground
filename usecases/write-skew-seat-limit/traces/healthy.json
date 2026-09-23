@@ -1,0 +1,14 @@
+{
+  "org_id": 4821,
+  "plan_seat_limit": 1,
+  "window": "2026-08-14T09:12:03Z .. 09:12:04Z",
+  "source": "postgres statement log joined to the app request log on backend_pid",
+  "note": "Two invites, sequential. The second one saw the first seat taken and was denied by the handler's guard. This is what a healthy day looks like.",
+  "events": [
+    { "ts": "09:12:03.114", "txn": "t1", "op": "select", "sql": "SELECT count(1) FROM members WHERE org_id = 4821", "returned": 0 },
+    { "ts": "09:12:03.119", "txn": "t1", "op": "insert", "sql": "INSERT INTO members (org_id, user_id) VALUES (4821, 90311)" },
+    { "ts": "09:12:03.126", "txn": "t1", "op": "commit", "sql": "COMMIT" },
+    { "ts": "09:12:03.902", "txn": "t2", "op": "select", "sql": "SELECT count(1) FROM members WHERE org_id = 4821", "returned": 1 },
+    { "ts": "09:12:03.904", "txn": "t2", "op": "deny", "http": "409 seat limit reached" }
+  ]
+}

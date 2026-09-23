@@ -7,12 +7,15 @@ on:
       - ".github/workflows/docs.yml"
       - "README.md"
       - "book/**"
+      - "docs/**"
       - "findings.md"
       - "flake.lock"
       - "flake.nix"
       - "justfile"
+      - "languages/**/*.md"
       - "real-world-adoption.ja.md"
       - "real-world-adoption.md"
+      - "scripts/check-links.sh"
       - "scripts/check-mermaid.sh"
       - "usecases/**"
       - "verification-tools.md"
@@ -38,3 +41,6 @@ jobs:
 
       - name: Check Mermaid diagrams
         run: nix develop -c just check-mermaid
+
+      - name: Check relative links
+        run: nix develop -c just check-links

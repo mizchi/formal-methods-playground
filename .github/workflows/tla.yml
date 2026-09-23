@@ -10,6 +10,8 @@ on:
       - "justfile"
       - "languages/tla/**"
       - "scripts/check-tla.sh"
+      - "scripts/trace-to-tla.sh"
+      - "usecases/write-skew-seat-limit/traces/**"
   workflow_dispatch:
 
 concurrency:
