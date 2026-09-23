@@ -1,0 +1,15 @@
+{
+  "org_id": 5140,
+  "plan_seat_limit": 1,
+  "window": "2026-08-22T10:05:58Z .. 10:05:59Z",
+  "source": "postgres statement log joined to the app request log on backend_pid",
+  "note": "Same overlap as the incident, on a pool that really is SERIALIZABLE: the second COMMIT came back 40001 serialization_failure and was rolled back. The seat limit held.",
+  "events": [
+    { "ts": "10:05:58.771", "txn": "t1", "op": "select", "sql": "SELECT count(1) FROM members WHERE org_id = 5140", "returned": 0 },
+    { "ts": "10:05:58.775", "txn": "t1", "op": "insert", "sql": "INSERT INTO members (org_id, user_id) VALUES (5140, 71002)" },
+    { "ts": "10:05:58.780", "txn": "t2", "op": "select", "sql": "SELECT count(1) FROM members WHERE org_id = 5140", "returned": 0 },
+    { "ts": "10:05:58.788", "txn": "t1", "op": "commit", "sql": "COMMIT" },
+    { "ts": "10:05:58.791", "txn": "t2", "op": "insert", "sql": "INSERT INTO members (org_id, user_id) VALUES (5140, 71118)" },
+    { "ts": "10:05:58.799", "txn": "t2", "op": "abort", "sqlstate": "40001", "detail": "could not serialize access due to read/write dependencies among transactions" }
+  ]
+}

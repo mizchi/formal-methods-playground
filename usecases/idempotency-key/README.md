@@ -43,7 +43,7 @@ Three constants pick out the three designs teams actually ship:
 | --- | --- | --- |
 | `tlc -config IdempotentRetry.cfg IdempotentRetry.tla` | no error (16 states, depth 8) | reserve-first + resumable + provider-side dedupe: at most one charge, and every retry settles |
 | `tlc -config IdempotentRetry_late.cfg IdempotentRetry.tla` | `Invariant NoDoubleCharge is violated` (`charges = 2`) | breaking variant (safety): the key row is written after the charge, so a crash in that window lets the retry charge again |
-| `tlc -config IdempotentRetry_blocking.cfg IdempotentRetry.tla` | `Temporal property EventuallySettled was violated` (stuttering at `rec = "reserved"`) | breaking variant (liveness): reserve-first with a hard 409 on `reserved` is safe and wedges after one crash |
+| `tlc -config IdempotentRetry_blocking.cfg IdempotentRetry.tla` | `Temporal properties were violated` — `EventuallySettled`, stuttering at `rec = "reserved"` | breaking variant (liveness): reserve-first with a hard 409 on `reserved` is safe and wedges after one crash |
 
 `IdempotentRetry.cfg` is the CI-green check. The other two are load-bearing and
 break *different* properties — keep both, because a future change that fixes one

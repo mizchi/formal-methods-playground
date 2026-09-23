@@ -3,7 +3,7 @@
 Direct SMT probes for implementation-extracted predicates.
 
 Japanese walkthrough of the workflow:
-[`../real-world-adoption.ja.md`](../real-world-adoption.ja.md#z3-で仕様をモデルに落としてドメインに戻す流れ).
+[`../../real-world-adoption.ja.md`](../../real-world-adoption.ja.md#z3-で仕様をモデルに落としてドメインに戻す流れ).
 
 ## checkout_form.smt2
 

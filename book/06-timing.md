@@ -175,6 +175,44 @@ T0 モデルは「SERIALIZABLE なら安全」と言うが、
 「本番が本当に SERIALIZABLE で動いているか」は T5 でしか答えられない。
 **T0 の結論は T5 の観測とセットで初めて主張になる。**
 
+### 同じモデルを T5 で使い直す
+
+この対を実際に閉じたのが
+[`languages/tla/SeatLimitTrace.tla`](../languages/tla/SeatLimitTrace.tla) である。
+新しいモデルは書かない。T0 の `SeatLimitWriteSkew` を `INSTANCE` して、
+**探索する代わりに本番ログを 1 行ずつ流す**。ログが次の手を決めるので
+状態空間は `ログ長 + 1` 本の直線で、1 秒かからない。T5 を nightly batch の
+予算に収めるというのは、こういう意味である。
+
+各行で問うのは「その手をモデルは*許すか*」だけで、壊れ方が 2 つに割れる。
+
+| 失敗 | 意味 |
+| --- | --- |
+| `TraceAccepted` 違反 | ログにモデルが許さない手がある。モデルが間違っているか、**思っている isolation level で動いていない** |
+| `SeatsWithinLimit` 違反 | ログはモデルに適合し、その上で業務ルールが破れた。バグは実在し、これがその witness |
+
+判別を効かせているのは `COMMIT` と `ROLLBACK` を別の op としてログに持つ点である。
+モデルの `Commit` は「成功」と「SSI による abort」の両方を覆うので、
+ログ側がどちらだったかを言えば、それを許す isolation level は 1 つに絞られる。
+**ログが isolation level を教えてくれる**のはこの構造による。
+
+同じインシデントログを 2 つの level で流したときの出方が、この probe の全部である。
+
+| 流す level | 結果 | 読み |
+| --- | --- | --- |
+| `SERIALIZABLE`（運用が主張する値） | `TraceAccepted` 違反、6 行目で停止 | この履歴は SERIALIZABLE では起こりえない |
+| `SI`（実際に許す値） | `SeatsWithinLimit` 違反、`members = 2` | その level なら適合し、上限は本当に破れている |
+
+片方だけでは原因に届かない。前者は「モデルと store が食い違う」としか言わず、
+後者は「上限が破れた」としか言わない。2 つ揃って初めて
+**「接続プールの isolation level が思っている値ではない」**、
+つまり並行性のバグではなく config のバグだ、という文になる。直す先のファイルが違う。
+
+なお緑の config も 2 つ用意してある。片方は競合が起きなかった日のログ、
+もう片方は競合して `40001` で abort された日のログで、
+**isolation level の積極的な証拠になるのは後者だけ**である。
+静かな日しか見ていない conformance check は何も測っていない。
+
 本番トラフィックを記録して再構成し、oracle で検証するという方向も出てきている
 （Cast, [arXiv:2602.00972](https://arxiv.org/html/2602.00972)）。
 
@@ -210,7 +248,7 @@ trace から性質を掘るアプローチ（LTL specification mining,
 | 分散・並行 state machine | ◎ TLA+/Quint | — | ○ 小 scope | — | — | ○ trace | ◎ |
 | event-driven protocol | ◎ P | — | ○ | — | — | ○ monitor | ○ |
 | schedule robustness | ○ | — | ○ | — | — | ◎ replay | ◎ |
-| log / trace conformance | — | — | ○ | — | — | ◎ | ◎ |
+| log / trace conformance | — | — | ○ | — | — | ◎ TLA+ replay | ◎ |
 | code-level contract | — | ◎ Dafny 等 | ○ 再検査 | ○ | — | — | ○ |
 | bounded memory safety | — | ○ | ◎ CBMC | ○ | — | ○ sanitizer | ○ |
 | model-code equivalence | — | ○ | ◎ differential | ◎ | — | ○ | ○ |
@@ -233,7 +271,7 @@ trace から性質を掘るアプローチ（LTL specification mining,
 | T2 | SERIALIZABLE 版を緑、SI 版を breaking variant として固定 | TLC 小 scope | isolation を戻す変更が赤になる |
 | T3 | プラン変更で上限計算を書き換えたとき、旧新で判定が変わる入力を出す | Z3 | 「どの org の挙動が変わるか」 |
 | T4 | 接続プールの isolation 設定を config claim として検査 | Z3 / 起動時 assert | 設定と設計の一致 |
-| T5 | 本番の DB history に異常が無いか確認する | Elle 系 history checker | 実測した isolation |
+| T5 | 本番ログを同じモデルに流して適合するか見る | TLA+ replay（[`SeatLimitTrace.tla`](../languages/tla/SeatLimitTrace.tla)）/ Elle 系 history checker | 実測した isolation |
 | T6 | 超過が起きたら、その trace がモデル上で許されるか確かめる | 同じ TLA+ モデル | 「モデルの穴」か「lock 漏れ」か |
 
 T0 と T5 が対になっていることに注意する。T0 は「SERIALIZABLE なら安全」を示し、

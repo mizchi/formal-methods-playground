@@ -1,0 +1,406 @@
+{
+  "note": "The repo's claim catalog. Every entry binds a domain claim to the machine result that is supposed to support it. scripts/check-claims.sh is the oracle: it runs each check and decides whether the repo still says what the book says it says. See claims/README.md.",
+  "claims": [
+    {
+      "claim_id": "ORDER-CHECKOUT-001",
+      "domain_claim": "a refund is only ever recorded for an order that is in the refunded state, and every payment attempt resolves",
+      "timing": "T0",
+      "role": "green",
+      "unguarded_reason": "no breaking variant yet: the probe predates the dual-check convention and the interesting negative is a fairness change, not a constant flip",
+      "tool": "tlc",
+      "spec": "languages/tla/OrderCheckout.tla",
+      "config": "languages/tla/OrderCheckout.cfg",
+      "expect": {
+        "outcome": "no-error",
+        "distinct_states": 20,
+        "depth": 6
+      },
+      "domain_wording": "the async checkout workflow cannot leave money refunded against a non-refunded order, and no payment attempt hangs forever"
+    },
+    {
+      "claim_id": "EVENT-SOURCING-001",
+      "domain_claim": "replaying the event log is deterministic, snapshots are prefixes of it, and the balance never goes negative",
+      "timing": "T0",
+      "role": "green",
+      "unguarded_reason": "no breaking variant yet; the four invariants each want their own negative and none has been written",
+      "tool": "tlc",
+      "spec": "languages/tla/EventSourcing.tla",
+      "config": "languages/tla/EventSourcing.cfg",
+      "expect": {
+        "outcome": "no-error",
+        "distinct_states": 118,
+        "depth": 5
+      },
+      "domain_wording": "rebuilding the ledger from its events gives the same balance every time, and a snapshot never disagrees with the log it came from"
+    },
+    {
+      "claim_id": "ACTOR-MAILBOX-001",
+      "domain_claim": "mailboxes stay bounded, per-pair message order is preserved, and every sent message is eventually delivered",
+      "timing": "T0",
+      "role": "green",
+      "unguarded_reason": "no breaking variant yet: the bound and the FIFO discipline are structural in the model rather than selected by a constant",
+      "tool": "tlc",
+      "spec": "languages/tla/ActorMailbox.tla",
+      "config": "languages/tla/ActorMailbox.cfg",
+      "expect": {
+        "outcome": "no-error",
+        "distinct_states": 1681,
+        "depth": 13
+      },
+      "domain_wording": "no actor's queue grows without bound, two messages between the same pair never overtake each other, and nothing is dropped"
+    },
+    {
+      "claim_id": "P2P-TRANSCRIPT-001",
+      "domain_claim": "an accepted game tick carries a self-checking transcript, and a dispute always carries sound evidence",
+      "timing": "T0",
+      "role": "green",
+      "unguarded_reason": "no breaking variant yet; the negatives worth writing are per-invariant cheats and none has been modelled",
+      "tool": "tlc",
+      "spec": "languages/tla/P2PGameProtocol.tla",
+      "config": "languages/tla/P2PGameProtocol.cfg",
+      "expect": {
+        "outcome": "no-error",
+        "distinct_states": 521,
+        "depth": 10
+      },
+      "domain_wording": "a peer cannot get a tick accepted without having committed before revealing, and a dispute cannot be raised without the evidence to back it"
+    },
+    {
+      "claim_id": "CLOUD-ROLLOUT-001",
+      "domain_claim": "traffic only ever reaches a healthy target, new traffic waits for the database, and a ready rollout finishes",
+      "timing": "T4",
+      "role": "green",
+      "unguarded_reason": "no breaking variant yet: the obvious negative (cut over before the migration lands) is not yet expressed as a constant",
+      "tool": "tlc",
+      "spec": "languages/tla/CloudRollout.tla",
+      "config": "languages/tla/CloudRollout.cfg",
+      "expect": {
+        "outcome": "no-error",
+        "distinct_states": 8,
+        "depth": 6
+      },
+      "domain_wording": "a blue/green cutover never sends users to an unhealthy target group, and never shifts traffic before the schema is ready"
+    },
+    {
+      "claim_id": "RATE-LIMIT-001",
+      "domain_claim": "at most Cap events are granted, under every interleaving of concurrent workers",
+      "timing": "T0",
+      "role": "green",
+      "guarded_by": [
+        "RATE-LIMIT-002"
+      ],
+      "tool": "tlc",
+      "spec": "languages/tla/RateLimitRace.tla",
+      "config": "languages/tla/RateLimitRace.cfg",
+      "expect": {
+        "outcome": "no-error",
+        "distinct_states": 4,
+        "depth": 3
+      },
+      "domain_wording": "an atomic check-and-increment holds the limit no matter how the two workers interleave",
+      "documented_in": [
+        "usecases/rate-limiting/README.md"
+      ],
+      "doc_claims": [
+        "no error"
+      ]
+    },
+    {
+      "claim_id": "RATE-LIMIT-002",
+      "domain_claim": "splitting the read from the record lets two workers both pass the check and over-grant",
+      "timing": "T0",
+      "role": "breaking",
+      "guards": [
+        "RATE-LIMIT-001"
+      ],
+      "tool": "tlc",
+      "spec": "languages/tla/RateLimitRace.tla",
+      "config": "languages/tla/RateLimitRace_naive.cfg",
+      "expect": {
+        "outcome": "invariant-violated",
+        "invariant": "NoOverGrant",
+        "witness": [
+          "granted = 2"
+        ],
+        "distinct_states": 12,
+        "depth": 5
+      },
+      "domain_wording": "two requests arriving together each read the old count and each grant, so the cap is exceeded by one",
+      "documented_in": [
+        "usecases/rate-limiting/README.md"
+      ],
+      "doc_claims": [
+        "`NoOverGrant` violated"
+      ]
+    },
+    {
+      "claim_id": "PAYMENT-IDEMPOTENCY-001",
+      "domain_claim": "an at-least-once retried request causes at most one external charge, and every request eventually settles",
+      "timing": "T0",
+      "role": "green",
+      "guarded_by": [
+        "PAYMENT-IDEMPOTENCY-002",
+        "PAYMENT-IDEMPOTENCY-003"
+      ],
+      "tool": "tlc",
+      "spec": "languages/tla/IdempotentRetry.tla",
+      "config": "languages/tla/IdempotentRetry.cfg",
+      "expect": {
+        "outcome": "no-error",
+        "distinct_states": 16,
+        "depth": 8
+      },
+      "domain_wording": "reserve the key first, resume a half-written row on retry, and let the provider dedupe: at most one charge, and nothing wedges",
+      "documented_in": [
+        "usecases/idempotency-key/README.md"
+      ],
+      "doc_claims": [
+        "no error (16 states, depth 8)"
+      ]
+    },
+    {
+      "claim_id": "PAYMENT-IDEMPOTENCY-002",
+      "domain_claim": "writing the key row after the provider call lets a crash in that window charge the customer twice",
+      "timing": "T0",
+      "role": "breaking",
+      "guards": [
+        "PAYMENT-IDEMPOTENCY-001"
+      ],
+      "tool": "tlc",
+      "spec": "languages/tla/IdempotentRetry.tla",
+      "config": "languages/tla/IdempotentRetry_late.cfg",
+      "expect": {
+        "outcome": "invariant-violated",
+        "invariant": "NoDoubleCharge",
+        "witness": [
+          "charges = 2"
+        ],
+        "distinct_states": 10,
+        "depth": 6
+      },
+      "domain_wording": "the process dies between charging and storing the key, the client retries, and the customer is charged a second time",
+      "documented_in": [
+        "usecases/idempotency-key/README.md"
+      ],
+      "doc_claims": [
+        "`Invariant NoDoubleCharge is violated`"
+      ]
+    },
+    {
+      "claim_id": "PAYMENT-IDEMPOTENCY-003",
+      "domain_claim": "reserve-first with a hard 409 on a reserved key never double charges, and wedges the key forever after one crash",
+      "timing": "T0",
+      "role": "breaking",
+      "guards": [
+        "PAYMENT-IDEMPOTENCY-001"
+      ],
+      "tool": "tlc",
+      "spec": "languages/tla/IdempotentRetry.tla",
+      "config": "languages/tla/IdempotentRetry_blocking.cfg",
+      "expect": {
+        "outcome": "property-violated",
+        "witness": [
+          "rec = \"reserved\""
+        ],
+        "distinct_states": 6
+      },
+      "domain_wording": "safety holds and liveness does not: the key is stuck at reserved and every retry gets a 409, so the payment never completes and no alarm fires",
+      "documented_in": [
+        "usecases/idempotency-key/README.md"
+      ],
+      "doc_claims": [
+        "`Temporal properties were violated`",
+        "stuttering at `rec = \"reserved\"`"
+      ]
+    },
+    {
+      "claim_id": "SEAT-LIMIT-001",
+      "domain_claim": "committed member rows never exceed the plan's seat limit",
+      "source_of_truth": "the invite handler's SQL and the isolation level the pool actually sets",
+      "timing": "T0",
+      "role": "green",
+      "guarded_by": [
+        "SEAT-LIMIT-003"
+      ],
+      "tool": "tlc",
+      "spec": "languages/tla/SeatLimitWriteSkew.tla",
+      "config": "languages/tla/SeatLimitWriteSkew.cfg",
+      "expect": {
+        "outcome": "no-error",
+        "distinct_states": 21,
+        "depth": 7
+      },
+      "domain_wording": "under PostgreSQL SERIALIZABLE the second transaction aborts at commit and the limit holds",
+      "documented_in": [
+        "usecases/write-skew-seat-limit/README.md"
+      ],
+      "doc_claims": [
+        "no error (21 states, depth 7)"
+      ]
+    },
+    {
+      "claim_id": "SEAT-LIMIT-002",
+      "domain_claim": "committed member rows never exceed the plan's seat limit — held by an explicit row lock instead of the isolation level",
+      "source_of_truth": "the invite handler's SQL and the isolation level the pool actually sets",
+      "timing": "T0",
+      "role": "green",
+      "guarded_by": [
+        "SEAT-LIMIT-003"
+      ],
+      "tool": "tlc",
+      "spec": "languages/tla/SeatLimitWriteSkew.tla",
+      "config": "languages/tla/SeatLimitWriteSkew_lock.cfg",
+      "expect": {
+        "outcome": "no-error",
+        "distinct_states": 11,
+        "depth": 6
+      },
+      "domain_wording": "SELECT ... FOR UPDATE on the org row materialises the conflict the two inserts do not have, so snapshot isolation is enough",
+      "documented_in": [
+        "usecases/write-skew-seat-limit/README.md"
+      ],
+      "doc_claims": [
+        "no error (11 states, depth 6)"
+      ]
+    },
+    {
+      "claim_id": "SEAT-LIMIT-003",
+      "domain_claim": "plain snapshot isolation admits the write skew and the seat limit breaks",
+      "timing": "T0",
+      "role": "breaking",
+      "guards": [
+        "SEAT-LIMIT-001",
+        "SEAT-LIMIT-002"
+      ],
+      "tool": "tlc",
+      "spec": "languages/tla/SeatLimitWriteSkew.tla",
+      "config": "languages/tla/SeatLimitWriteSkew_si.cfg",
+      "expect": {
+        "outcome": "invariant-violated",
+        "invariant": "SeatsWithinLimit",
+        "witness": [
+          "members = 2"
+        ],
+        "distinct_states": 20,
+        "depth": 7
+      },
+      "domain_wording": "two admins clicking Invite within the same second both see one free seat, and the org ends up with two members on a one-seat plan",
+      "documented_in": [
+        "usecases/write-skew-seat-limit/README.md"
+      ],
+      "doc_claims": [
+        "`SeatsWithinLimit` violated"
+      ]
+    },
+    {
+      "claim_id": "SEAT-LIMIT-T5-001",
+      "domain_claim": "a quiet day's production log is a behaviour the model admits at the isolation level we claim, and the limit held",
+      "source_of_truth": "the postgres statement log joined to the app request log",
+      "timing": "T5",
+      "role": "green",
+      "guarded_by": [
+        "SEAT-LIMIT-T5-003",
+        "SEAT-LIMIT-T5-004"
+      ],
+      "tool": "tlc",
+      "spec": "languages/tla/SeatLimitTrace.tla",
+      "config": "languages/tla/SeatLimitTrace.cfg",
+      "expect": {
+        "outcome": "no-error",
+        "distinct_states": 6,
+        "depth": 6
+      },
+      "domain_wording": "nothing contended and nobody went over: what a conformance check says on almost every day it runs",
+      "documented_in": [
+        "usecases/write-skew-seat-limit/README.md"
+      ],
+      "doc_claims": [
+        "no error (6 states, depth 6)"
+      ]
+    },
+    {
+      "claim_id": "SEAT-LIMIT-T5-002",
+      "domain_claim": "a log that contended and lost to a 40001 is admitted only by SERIALIZABLE, so it is positive evidence for the isolation level",
+      "source_of_truth": "the postgres statement log joined to the app request log",
+      "timing": "T5",
+      "role": "green",
+      "guarded_by": [
+        "SEAT-LIMIT-T5-003",
+        "SEAT-LIMIT-T5-004"
+      ],
+      "tool": "tlc",
+      "spec": "languages/tla/SeatLimitTrace.tla",
+      "config": "languages/tla/SeatLimitTrace_retry.cfg",
+      "expect": {
+        "outcome": "no-error",
+        "distinct_states": 7,
+        "depth": 7
+      },
+      "domain_wording": "the pool really is on SSI: the overlapping invite was rolled back with a serialization failure rather than committed",
+      "documented_in": [
+        "usecases/write-skew-seat-limit/README.md"
+      ],
+      "doc_claims": [
+        "no error (7 states, depth 7)"
+      ]
+    },
+    {
+      "claim_id": "SEAT-LIMIT-T5-003",
+      "domain_claim": "the incident log is not a behaviour the model admits at the isolation level ops claim the pool is set to",
+      "source_of_truth": "the postgres statement log joined to the app request log",
+      "timing": "T5",
+      "role": "breaking",
+      "guards": [
+        "SEAT-LIMIT-T5-001",
+        "SEAT-LIMIT-T5-002"
+      ],
+      "tool": "tlc",
+      "spec": "languages/tla/SeatLimitTrace.tla",
+      "config": "languages/tla/SeatLimitTrace_claimed.cfg",
+      "expect": {
+        "outcome": "property-violated",
+        "witness": [
+          "i = 6"
+        ],
+        "distinct_states": 6
+      },
+      "domain_wording": "log line 6 is the second COMMIT, which SSI would have aborted: this history cannot have happened under SERIALIZABLE",
+      "documented_in": [
+        "usecases/write-skew-seat-limit/README.md"
+      ],
+      "doc_claims": [
+        "`Temporal properties were violated`, final state `i = 6`"
+      ]
+    },
+    {
+      "claim_id": "SEAT-LIMIT-T5-004",
+      "domain_claim": "at the isolation level that does admit the incident log, the seat limit really was exceeded",
+      "source_of_truth": "the postgres statement log joined to the app request log",
+      "timing": "T5",
+      "role": "breaking",
+      "guards": [
+        "SEAT-LIMIT-T5-001",
+        "SEAT-LIMIT-T5-002"
+      ],
+      "tool": "tlc",
+      "spec": "languages/tla/SeatLimitTrace.tla",
+      "config": "languages/tla/SeatLimitTrace_actual.cfg",
+      "expect": {
+        "outcome": "invariant-violated",
+        "invariant": "SeatsWithinLimit",
+        "witness": [
+          "members = 2"
+        ],
+        "distinct_states": 7,
+        "depth": 7
+      },
+      "domain_wording": "the pool was on REPEATABLE READ and the org finished with two members on a one-seat plan",
+      "documented_in": [
+        "usecases/write-skew-seat-limit/README.md"
+      ],
+      "doc_claims": [
+        "`Invariant SeatsWithinLimit is violated` (`members = 2`)"
+      ]
+    }
+  ]
+}
