@@ -29,6 +29,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CATALOG = ROOT / "claims" / "catalog.json"
@@ -47,23 +48,36 @@ if not sys.stdout.isatty():
 class Mismatch(Exception):
     """A claim's machine result no longer matches the catalog."""
 
-    def __init__(self, drift_class: str, detail: str, hint: str = "") -> None:
+    def __init__(self, drift_class: str, detail: str, hint: str = "",
+                 evidence: str = "") -> None:
         super().__init__(detail)
         self.drift_class = drift_class
         self.detail = detail
         self.hint = hint
+        self.evidence = evidence
 
 
-def run_tlc(claim: dict) -> str:
+def run_tlc(claim: dict) -> tuple[str, int]:
     spec = pathlib.Path(claim["spec"])
     config = pathlib.Path(claim["config"])
-    proc = subprocess.run(
-        ["tlc", "-config", config.name, spec.name],
-        cwd=ROOT / spec.parent,
-        capture_output=True,
-        text=True,
-    )
-    return proc.stdout + proc.stderr
+    # TLC names its scratch directory after the wall clock to the second, so
+    # two runs that start inside the same second fight over it:
+    #
+    #   TLCRuntimeException: TLC writes its files to a directory whose name is
+    #   generated from the current time.
+    #
+    # Every probe here finishes in well under a second, so that is the normal
+    # case, not a rare one. Give each run its own metadir. It also keeps the
+    # repo tree clean, which matters more than the collision: a check that
+    # litters the directory it runs in can poison the next one.
+    with tempfile.TemporaryDirectory(prefix="tlc-claim-") as metadir:
+        proc = subprocess.run(
+            ["tlc", "-metadir", metadir, "-config", config.name, spec.name],
+            cwd=ROOT / spec.parent,
+            capture_output=True,
+            text=True,
+        )
+        return proc.stdout + proc.stderr, proc.returncode
 
 
 RUNNERS = {"tlc": run_tlc}
@@ -92,17 +106,23 @@ def observe(output: str) -> dict:
     return result
 
 
-def compare(claim: dict, expect: dict, actual: dict, output: str) -> None:
+def compare(claim: dict, expect: dict, actual: dict, output: str,
+            exit_code: int = 0) -> None:
     role = claim.get("role", "green")
 
     if actual["outcome"] != expect["outcome"]:
         if actual["outcome"] == "unrecognised":
+            # Whatever went wrong, it was not a claim changing. Show what the
+            # tool said: an unreadable outcome reported without the evidence
+            # is not something anyone can act on.
             raise Mismatch(
                 "harness-drift",
                 f"could not read an outcome out of the tool's output "
-                f"(expected {expect['outcome']})",
-                "the tool version or its output format changed; check the "
-                "run by hand before touching the model",
+                f"(expected {expect['outcome']}, tool exited {exit_code})",
+                "the tool did not get as far as a verdict -- this is about the "
+                "harness, not the model. Read the output below before touching "
+                "anything in languages/.",
+                evidence=output,
             )
         if role == "breaking" and actual["outcome"] == "no-error":
             raise Mismatch(
@@ -250,10 +270,10 @@ def main() -> int:
             print(f"{RED}FAIL{OFF} {cid}: no runner for tool {claim['tool']!r}")
             continue
 
-        output = runner(claim)
+        output, exit_code = runner(claim)
         actual = observe(output)
         try:
-            compare(claim, claim["expect"], actual, output)
+            compare(claim, claim["expect"], actual, output, exit_code)
         except Mismatch as mismatch:
             failures.append(f"{cid}: {mismatch.detail}")
             print(f"{RED}DRIFT{OFF} {cid}  [{BOLD}{mismatch.drift_class}{OFF}]")
@@ -263,6 +283,11 @@ def main() -> int:
             print(f"      drift   : {mismatch.detail}")
             if mismatch.hint:
                 print(f"      what to do: {mismatch.hint}")
+            if mismatch.evidence:
+                tail = [ln for ln in mismatch.evidence.splitlines() if ln.strip()][-12:]
+                print(f"      {DIM}--- what the tool printed ---{OFF}")
+                for line in tail:
+                    print(f"      {DIM}| {line}{OFF}")
             continue
 
         doc_problems = check_documentation(claim)
