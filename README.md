@@ -28,6 +28,7 @@ counter-example style, and effort cost become concrete.
 | [`usecases/idempotency-key/`](usecases/idempotency-key/) | TLA+ applied | at-least-once retry: no double side effect, and no wedged key |
 | [`usecases/write-skew-seat-limit/`](usecases/write-skew-seat-limit/) | TLA+ applied | write skew on a seat limit under snapshot isolation, plus a production-log replay against the same model |
 | [`usecases/schema-evolution/`](usecases/schema-evolution/) | Z3 applied | rolling-deploy compatibility in both directions |
+| [`claims/`](claims/) | drift oracle | every probe's claim and the machine result that backs it, checked in CI |
 | [`languages/p/`](languages/p/) | P language | actor-model state machines with built-in checker |
 
 ## Tool selection guide

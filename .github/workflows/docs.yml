@@ -15,7 +15,7 @@ on:
       - "languages/**/*.md"
       - "real-world-adoption.ja.md"
       - "real-world-adoption.md"
-      - "scripts/check-links.sh"
+      - "scripts/check-links.py"
       - "scripts/check-mermaid.sh"
       - "usecases/**"
       - "verification-tools.md"

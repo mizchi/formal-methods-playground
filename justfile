@@ -127,7 +127,12 @@ check-mermaid:
     ./scripts/check-mermaid.sh
 
 check-links:
-    ./scripts/check-links.sh
+    ./scripts/check-links.py
+
+# The oracle over claims/catalog.json: does the repo still say what the book
+# says it says? check-tla runs the tlc slice of this; this runs all of it.
+check-claims:
+    ./scripts/check-claims.py
 
 check-p:
     cd languages/p/PingPong && p compile && p check --schedules 1000

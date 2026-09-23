@@ -482,6 +482,14 @@ and observedTrace refines Model
 proof / model check / symbolic analysis を CI に置き、実装や仕様が変わったら
 どの claim が変わったかをドメイン語で報告する必要がある。
 
+repo 内の例: [`claims/catalog.json`](../claims/catalog.json) と
+そのオラクル [`scripts/check-claims.py`](../scripts/check-claims.py)。
+`checkResult == expectedResult` を散文ではなくデータで持ち、
+green と breaking variant を同じ扱いで全件実行する。
+**効くのは breaking 側**である。性質を弱めても green は green のまま通るので、
+壊れるはずの config が壊れなくなったことは、そこを見ている検査が無ければ
+誰にも気づかれない。詳細は [`claims/README.md`](../claims/README.md)。
+
 ## 12. Replica convergence
 
 自然言語の形:
