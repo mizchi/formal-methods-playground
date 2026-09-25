@@ -23,7 +23,7 @@ counter-example style, and effort cost become concrete.
 | [`languages/rocq/`](languages/rocq/) | Rocq (formerly Coq) | interactive proofs for compiler / semantics and a mature ecosystem |
 | [`languages/moonbit/`](languages/moonbit/) | MoonBit `moon prove` | Dafny-style annotations → Why3 → SMT |
 | [`usecases/terraform-reachability/`](usecases/terraform-reachability/) | Alloy applied | microservice reachability graph from terraform SGs |
-| [`usecases/wasmplane-route-placement/`](usecases/wasmplane-route-placement/) | Alloy applied | route snapshot placement bug witnesses and fixed-contract checks |
+| [`usecases/route-snapshot-placement/`](usecases/route-snapshot-placement/) | Alloy applied | route snapshot placement bug witnesses and fixed-contract checks |
 | [`usecases/offline-sync-convergence/`](usecases/offline-sync-convergence/) | Alloy applied | offline-first LWW merge: strong eventual consistency and its clock assumption |
 | [`usecases/idempotency-key/`](usecases/idempotency-key/) | TLA+ applied | at-least-once retry: no double side effect, and no wedged key |
 | [`usecases/write-skew-seat-limit/`](usecases/write-skew-seat-limit/) | TLA+ applied | write skew on a seat limit under snapshot isolation |
@@ -133,7 +133,7 @@ should have a top-of-file comment block with:
 | Rocq | `languages/rocq/Rbac.v` | Leanとの最小構文比較として残す RBAC monotonicity probe |
 | MoonBit | `languages/moonbit/checkout_form/` | executable tests pass; `moon prove` succeeds with opam Why3 1.7.2 + Alt-Ergo 2.5.4; 5 goals proved |
 | Alloy applied | `usecases/terraform-reachability/` | 3-service stack + SG ingress edges; direct safety UNSAT, transitive surfaces proxy-chain path |
-| Alloy applied | `usecases/wasmplane-route-placement/` | wasmplane route snapshot placement bugs; legacy witnesses SAT, fixed-contract checks UNSAT |
+| Alloy applied | `usecases/route-snapshot-placement/` | control-plane route snapshot placement bugs; legacy witnesses SAT, fixed-contract checks UNSAT |
 | P | `languages/p/PingPong/` | two-actor ping-pong + safety monitor; 1000 schedules, 0 bugs |
 | TLA+ applied | `usecases/idempotency-key/` | idempotency keys under retry; correct design green (16 states, depth 8), late-store witness `charges = 2`, blocking witness wedges at `reserved` |
 | TLA+ applied | `usecases/write-skew-seat-limit/` | seat limit under SI/SSI/row lock; SERIALIZABLE and FOR UPDATE green, snapshot isolation witnesses `members = 2` on a 1-seat plan |

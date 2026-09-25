@@ -1,5 +1,5 @@
 /*
- * Probe: route snapshot placement bugs found in mizchi/wasmplane.
+ * Probe: route snapshot placement bugs in a control plane.
  *
  * This is a bug-hunting pattern for control-plane publish target
  * synthesis. The useful split is:

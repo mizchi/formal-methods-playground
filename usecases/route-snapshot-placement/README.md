@@ -1,11 +1,11 @@
-# wasmplane-route-placement/
+# route-snapshot-placement/
 
-Probe: model route snapshot publish target synthesis bugs found
-while hardening [`mizchi/wasmplane`](https://github.com/mizchi/wasmplane).
+Probe: model route snapshot publish target synthesis bugs in a
+control plane that places routes onto runtime hosts.
 
 ## What this models
 
-The wasmplane control plane publishes route snapshots to runtime
+The control plane publishes route snapshots to runtime
 hosts. The bug-prone surface is the composition of:
 
 - registered runtime nodes selected by placement policy
@@ -22,7 +22,7 @@ delivered projects, heartbeat freshness, and rule validity.
 ## Run
 
 ```sh
-cd usecases/wasmplane-route-placement
+cd usecases/route-snapshot-placement
 nix develop ../..  # if not already in devShell
 
 alloy6 exec -f --command LegacyDuplicateDropsIsolation route-placement.als
@@ -62,7 +62,7 @@ This usecase is for the "compose two individually reasonable
 sets, then lose the specific contract at the merge" class of
 control-plane bugs.
 
-The concrete wasmplane findings were:
+The concrete bug shapes are:
 
 1. Static target first-wins dedupe could shadow the registered
    node-specific snapshot for an isolated project.
