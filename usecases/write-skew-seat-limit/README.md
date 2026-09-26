@@ -106,13 +106,18 @@ see one free seat, and the org ends up with two members on a one-seat plan."*
 
 | field | value |
 | --- | --- |
-| source of truth | the invite handler's SQL and the isolation level the pool actually sets |
-| claim | committed member rows never exceed the plan's seat limit |
+| source | the invite handler's SQL and the isolation level the pool actually sets |
+| expected claim | committed member rows never exceed the plan's seat limit |
+| implementation observation | `repro/invite.ts` counts members, checks the limit, then inserts, optionally after `SELECT ... FOR UPDATE` on the org row; against PostgreSQL 17, only `READ COMMITTED` + `FOR UPDATE` and `SERIALIZABLE` keep one member |
 | model question | is there a commit interleaving with `members > SeatLimit`? |
 | tool | TLA+ (TLC) |
 | machine result | SERIALIZABLE: no error / SI: `SeatsWithinLimit` violated, `members = 2` / SI_LOCK: no error / RR_LOCK: `SeatsWithinLimit` violated, `members = 2` |
+| witness | SI: both transactions read `count = 0`, both insert, both commit (see "The trace to show a reviewer"); RR_LOCK ends the same way |
+| reproduction | The SI trace reproduced (`REPEATABLE READ` without the lock: 2 members). The old `SI_LOCK` model did not match: it was green, but `REPEATABLE READ` + `FOR UPDATE` still admitted 2 members, because PostgreSQL takes the snapshot before the lock wait. Model bug; corrected as `RR_LOCK`, which reproduces the trace, and `SI_LOCK` now models `READ COMMITTED` (1 member). |
 | domain wording | "under REPEATABLE READ, two simultaneous invites both pass the seat check and both commit -- and adding FOR UPDATE does not change that; use READ COMMITTED + FOR UPDATE or SERIALIZABLE" |
-| lock | `just check-tla` |
+| domain question | Which isolation level does the connection pool actually set, and does the caller retry a `40001` under `SERIALIZABLE`? |
+| decision | bug in the handler, plus model bug (`SI_LOCK` corrected as `RR_LOCK`); `SeatLimitWriteSkew.cfg` (SERIALIZABLE) is the CI check |
+| lock | `just check-tla` (runs `SeatLimitWriteSkew.cfg` and `_lock` green, and `_si` / `_rrlock` expecting `SeatsWithinLimit` to be violated); `cd usecases/write-skew-seat-limit/repro && pnpm test` (needs PostgreSQL) |
 
 ## What this does NOT catch
 

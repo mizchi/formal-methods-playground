@@ -27,7 +27,7 @@ The probe asks three questions on this graph:
 
 ```sh
 cd terraform-reachability
-nix develop ..  # if not already in devShell
+nix develop ../..  # if not already in devShell
 
 alloy6 exec -f --command FrontendCannotReachDbDirectly reachability.als
 alloy6 exec -f --command ApiCanReachDb reachability.als
@@ -103,3 +103,20 @@ Real microservice meshes also have:
 
 Each of these is a new sig + fact section; the closure logic
 in `CanReachTransitive` stays unchanged.
+
+## Domain ledger
+
+| field | value |
+| --- | --- |
+| source | `fixture/main.tf`; the facts in `reachability.als` are hand-encoded from it (the plan-JSON translator is not implemented) |
+| expected claim | Frontend has no direct path to Db; Api can reach Db |
+| implementation observation | two ingress rules: api admits frontend (port 8080), db admits api (port 5432); no rule connects frontend to db |
+| model question | Is there a direct frontend -> db edge? Does api -> db exist? Is db in frontend's transitive closure `^edges`? |
+| tool | Alloy 6 (scope 3) |
+| machine result | `FrontendCannotReachDbDirectly` UNSAT / `ApiCanReachDb` SAT / `FrontendNeverTransitivelyReachesDb` SAT (intentional counterexample) |
+| witness | frontend -> api -> db |
+| reproduction | none yet |
+| domain wording | Frontend cannot open a connection to Db, but it reaches Db through the frontend -> api -> db proxy chain that the rule table does not make obvious. |
+| domain question | Is the frontend -> api -> db chain intended data flow, or should Api not relay Frontend requests to Db? |
+| decision | unresolved: the transitive SAT is a deliberate review item, not a verdict |
+| lock | `nix develop -c just check-alloy` |

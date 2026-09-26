@@ -190,44 +190,20 @@ nix develop -c just check-tla
 
 ## Domain ledger
 
-```text
-source:
-  Terraform / Pulumi / CloudFormation / Kubernetes configuration.
-
-expected claim:
-  Public traffic reaches only the intended entrypoint.
-  Database is reachable only from application roles that are supposed to use it.
-  Rollout never sends traffic to an unhealthy or schema-incompatible target.
-
-model question:
-  Static: does the extracted graph contain a forbidden direct or transitive path?
-  Temporal: can any allowed deployment ordering violate the rollout invariants?
-
-tool:
-  Alloy for extracted connectivity facts.
-  TLA+ for rollout / failover / lifecycle transitions.
-
-machine result:
-  SAT means "here is a concrete topology/path/order".
-  UNSAT for an assertion check means no counterexample exists in the scope.
-  TLC success means every explored state satisfies the invariants.
-
-domain wording:
-  "Internet cannot open a direct DB connection."
-  "Internet can still cause DB writes through ALB and API; API must be treated as
-  the authorization boundary."
-  "Traffic will not move to the new target group until both target health and DB
-  compatibility are true."
-
-domain question:
-  Is the transitive Internet -> ALB -> API -> DB path intended data flow?
-  If intended, where is authorization enforced and logged?
-  If not intended, should the API route, IAM permission, or DB ingress be split?
-
-lock:
-  `nix develop -c just check-alloy`
-  `nix develop -c just check-tla`
-```
+| field | value |
+| --- | --- |
+| source | Terraform / Pulumi / CloudFormation / Kubernetes configuration; here, the hand-written facts in `connectivity.als` and `cloudflare-workers-bindings.als`, and the rollout in `languages/tla/CloudRollout.tla` |
+| expected claim | Public traffic reaches only the intended entrypoint. Database is reachable only from application roles that are supposed to use it. Rollout never sends traffic to an unhealthy or schema-incompatible target. |
+| implementation observation | No rule connects Internet directly to DB, but Internet -> ALB -> API -> DB exists; the modeled Preview API Worker binds Prod D1 (intentional bug) |
+| model question | Static: does the extracted graph contain a forbidden direct or transitive path? Temporal: can any allowed deployment ordering violate the rollout invariants? |
+| tool | Alloy for extracted connectivity facts; TLA+ for rollout / failover / lifecycle transitions |
+| machine result | `connectivity.als`: `InternetCanReachAlb` SAT, `ApiCanReachDb` SAT, `NoInternetDirectToDb` UNSAT, `InternetNeverAffectsDb` SAT, `InternetCannotReachWorker` UNSAT / `cloudflare-workers-bindings.als`: `ProdApiCanReachProdD1` SAT, `PublicApiCanReachAuthService` SAT, `StaticAssetsCannotReachDataBindings` UNSAT, `PublicEntryWorkerCannotBindSecretDirectly` UNSAT, `PreviewNeverUsesProductionData` SAT / `CloudRollout.cfg`: no error. SAT on an assertion check is a concrete path; UNSAT means no counterexample in the scope. |
+| witness | `InternetNeverAffectsDb`: Internet -> ALB -> API -> DB; `PreviewNeverUsesProductionData`: Preview API route -> PreviewApiWorker -> Prod D1 |
+| reproduction | none yet |
+| domain wording | "Internet cannot open a direct DB connection." "Internet can still cause DB writes through ALB and API; API must be treated as the authorization boundary." "Preview API traffic can reach production D1 through its Worker binding." "Traffic will not move to the new target group until both target health and DB compatibility are true." |
+| domain question | Is the transitive Internet -> ALB -> API -> DB path intended data flow? If intended, where is authorization enforced and logged? If not intended, should the API route, IAM permission, or DB ingress be split? Is preview allowed to mutate production data, or should preview bind PreviewD1? |
+| decision | unresolved: the transitive DB path is a question for the owner, and the preview -> Prod D1 binding is an intentional demo bug with no fixed variant in the model |
+| lock | `nix develop -c just check-alloy` (pins every SAT/UNSAT above, including the two intentional counterexamples); `nix develop -c just check-tla` |
 
 ## What to extract from real cloud config
 

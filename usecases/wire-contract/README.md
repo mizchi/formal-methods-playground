@@ -40,12 +40,17 @@ nix develop -c just check-z3
 
 | field | value |
 | --- | --- |
-| source of truth | producer and consumer layout code (or two service/port implementations) |
-| claim | decode(encode(x)) == x for every field value |
+| source | producer and consumer layout code (or two service/port implementations) |
+| expected claim | decode(encode(x)) == x for every field value |
+| implementation observation | the aligned codec encodes and decodes at `Q = 4`; the breaking variants decode at `Q = 3`, or reverse the block order in the codec while the consumer reads forward |
 | model question | is there a field content + position where the decoded bit differs from the source bit? |
 | tool | Z3 |
 | machine result | unsat (aligned round-trips) / sat, sat (breaking variants) |
+| witness | an hour `h` and bitmap where `producer((h*3) div 4)` or `producer((H-1) - h)` differs from `producer(h)`; the script prints no model |
+| reproduction | none yet; the README proposes reproducing the real transform tables or trace-checking real encoded payloads |
 | domain wording | "hourly and quarter-hour sides agree only when the codec expands by exactly the factor the consumer assumes and both use the same block order" |
+| domain question | Does the production codec use the granularity and block order the consumer assumes? |
+| decision | bug (demo); the aligned codec is the CI check (`unsat`) |
 | lock | `just check-z3` |
 
 ## What this does NOT catch

@@ -119,41 +119,20 @@ ticks.
 
 ## Domain ledger
 
-```text
-source:
-  P2P game tick protocol sketch.
-
-expected claim:
-  A tick is accepted only when every peer can replay the same transcript:
-  commit -> reveal -> deterministic state hash.
-
-model question:
-  Across every commit/reveal/hash ordering in the finite model, can a bad
-  commit, invalid input, or wrong state hash still reach accepted?
-
-tool:
-  TLA+ / TLC for protocol states and interleavings.
-  MoonBit prove for the executable verifier contract.
-
-machine result:
-  TLC found no invariant or liveness violation in the modeled scope.
-  MoonBit prove discharged the `verify_tick == tick_spec` and
-  `verify_transcript == transcript_spec` obligations.
-
-domain wording:
-  A peer cannot get a tick accepted by revealing a different input than it
-  committed to, by revealing a speedhack input, or by reporting a state hash
-  that does not match deterministic replay.
-
-domain question:
-  Are these verdicts enough for product behavior, or does dispute handling need
-  more detailed reasons such as "late reveal" and "missing hash"?
-
-lock:
-  `nix develop -c just check-tla`
-  `nix develop -c just test-moonbit`
-  `nix develop -c just prove-moonbit`
-```
+| field | value |
+| --- | --- |
+| source | P2P game tick protocol sketch |
+| expected claim | A tick is accepted only when every peer can replay the same transcript: commit -> reveal -> deterministic state hash. |
+| implementation observation | MoonBit `verify_tick` / `TickTranscript::verify_transcript()` return one of five verdicts; the toy uses small integer/string encodings instead of real hashes and signatures |
+| model question | Across every commit/reveal/hash ordering in the finite model, can a bad commit, invalid input, or wrong state hash still reach accepted? |
+| tool | TLA+ / TLC for protocol states and interleavings; MoonBit prove for the executable verifier contract |
+| machine result | TLC (`P2PGameProtocol.cfg`): no invariant or liveness violation (717 states generated, 521 distinct). MoonBit prove discharged `verify_tick == tick_spec` and `verify_transcript == transcript_spec`. |
+| witness | none (no violation in the modeled scope) |
+| reproduction | none yet (no witness to force); the MoonBit tests cover honest accept, commit/reveal mismatch, speedhack input, state-hash equivocation, and incomplete ticks |
+| domain wording | A peer cannot get a tick accepted by revealing a different input than it committed to, by revealing a speedhack input, or by reporting a state hash that does not match deterministic replay. |
+| domain question | Are these verdicts enough for product behavior, or does dispute handling need more detailed reasons such as "late reveal" and "missing hash"? |
+| decision | unresolved: no bug in the modeled scope; the verdict granularity question is open |
+| lock | `nix develop -c just check-tla`; `nix develop -c just test-moonbit`; `nix develop -c just prove-moonbit` |
 
 ## What this catches
 

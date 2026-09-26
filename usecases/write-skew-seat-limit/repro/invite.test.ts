@@ -62,3 +62,11 @@ test("REPEATABLE READ + FOR UPDATE: the lock does NOT fix it", async () => {
   const r = await twoAdminsInvite({ isolation: "REPEATABLE READ", lockOrg: true });
   assert.equal(r.members, 2);
 });
+
+// Under SERIALIZABLE the lock does not turn the second invite into "full":
+// its snapshot predates the first commit, so PostgreSQL aborts it instead.
+test("SERIALIZABLE + FOR UPDATE: one invite fails with 40001, the limit holds", async () => {
+  const r = await twoAdminsInvite({ isolation: "SERIALIZABLE", lockOrg: true });
+  assert.deepEqual(r.results, ["invited", "serialization_failure"]);
+  assert.equal(r.members, 1);
+});

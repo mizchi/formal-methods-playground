@@ -66,3 +66,17 @@ run_expect usecases/offline-sync-convergence/lww-merge.als NaiveTieDiverges SAT
 run_expect usecases/offline-sync-convergence/lww-merge.als NaiveReplicaHasNoUniqueWinner SAT
 run_expect usecases/offline-sync-convergence/lww-merge.als RepeatedStampBreaksTiebreak SAT
 run_expect usecases/offline-sync-convergence/lww-merge.als ConcurrentEditsExist SAT
+
+run_expect usecases/tenant-authz/authz.als ImplNoCrossTenantRead SAT
+run_expect usecases/tenant-authz/authz.als ImplNoBillingAdminProjectRead SAT
+run_expect usecases/tenant-authz/authz.als ImplSupportInvoiceOnly SAT
+run_expect usecases/tenant-authz/authz.als ImplMatchesDocs SAT
+run_expect usecases/tenant-authz/authz.als FixedNoCrossTenantRead UNSAT
+run_expect usecases/tenant-authz/authz.als FixedNoBillingAdminProjectRead UNSAT
+run_expect usecases/tenant-authz/authz.als FixedSupportInvoiceOnly UNSAT
+run_expect usecases/tenant-authz/authz.als FixedMatchesDocs UNSAT
+run_expect usecases/tenant-authz/authz.als SanityOwnerReadsOwnProject SAT
+run_expect usecases/tenant-authz/authz.als SanityBillingAdminReadsOwnInvoice SAT
+run_expect usecases/tenant-authz/authz.als SanitySupportReadsInvoice SAT
+
+./usecases/iam-assume-role/check.sh

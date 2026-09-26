@@ -11,6 +11,14 @@ consumers, "send the welcome email exactly once", provisioning a tenant,
 minting an invite. Anything where the client cannot tell a lost response from
 a lost request.
 
+This is the reference implementation for scenario C of the
+[`formal-methods-reconciler`](https://github.com/mizchi/skills/tree/main/formal-methods-reconciler)
+skill eval (`formal-reconciler-async-tla-p-001`). That scenario records the key
+in an async job after the provider call, which is the `_late` design below with
+a wider window. Its other step, a retry that arrives before the job runs with
+no crash at all, is two attempts in flight at once; this model runs one attempt
+at a time (see "What this does NOT catch").
+
 The source of truth is the handler's write order plus the retry policy. Do not
 model HTTP; model the two writes and the crash window between them.
 
@@ -43,7 +51,7 @@ Three constants pick out the three designs teams actually ship:
 | --- | --- | --- |
 | `tlc -config IdempotentRetry.cfg IdempotentRetry.tla` | no error (16 states, depth 8) | reserve-first + resumable + provider-side dedupe: at most one charge, and every retry settles |
 | `tlc -config IdempotentRetry_late.cfg IdempotentRetry.tla` | `Invariant NoDoubleCharge is violated` (`charges = 2`) | breaking variant (safety): the key row is written after the charge, so a crash in that window lets the retry charge again |
-| `tlc -config IdempotentRetry_blocking.cfg IdempotentRetry.tla` | `Temporal property EventuallySettled was violated` (stuttering at `rec = "reserved"`) | breaking variant (liveness): reserve-first with a hard 409 on `reserved` is safe and wedges after one crash |
+| `tlc -config IdempotentRetry_blocking.cfg IdempotentRetry.tla` | `Temporal properties were violated` (the cfg's only `PROPERTY` is `EventuallySettled`; stuttering at `rec = "reserved"`) | breaking variant (liveness): reserve-first with a hard 409 on `reserved` is safe and wedges after one crash |
 
 `IdempotentRetry.cfg` is the CI-green check. The other two are load-bearing and
 break *different* properties — keep both, because a future change that fixes one
@@ -74,13 +82,18 @@ The domain sentence is one line: *"if we die between the provider call and the
 
 | field | value |
 | --- | --- |
-| source of truth | the handler's write order, the retry policy, and the provider's own dedupe guarantee |
-| claim | at most one external side effect per idempotency key, and every retried request eventually settles |
+| source | the handler's write order, the retry policy, and the provider's own dedupe guarantee |
+| expected claim | at most one external side effect per idempotency key, and every retried request eventually settles |
+| implementation observation | `repro/handler.ts` implements the three designs: key row written after the charge, reserve-first with a 409 while `reserved`, and reserve-first + takeover + provider dedupe |
 | model question | is there a crash interleaving with `charges > 1`? is there one where `pc` never reaches `settled`? |
 | tool | TLA+ (TLC) |
-| machine result | green cfg: no error / `_late`: `NoDoubleCharge` violated, `charges = 2` / `_blocking`: `EventuallySettled` violated |
+| machine result | green cfg: no error (16 states, depth 8) / `_late`: `NoDoubleCharge` violated, `charges = 2` / `_blocking`: `EventuallySettled` violated (stuttering at `rec = "reserved"`) |
+| witness | `_late`: Begin, Charge, Crash, Begin, Charge (see "The trace to show a reviewer"); `_blocking`: Begin (`rec = "reserved"`), Crash, then stuttering |
+| reproduction | reproduced: `repro/handler.test.ts` forces both crash points (`afterCharge` gives `charges = 2`, `afterReserve` gives `"gave up"`) and passes one charge for the fixed design; `test-oracle/tla-trace/` replays the TLC traces against the same handler |
 | domain wording | "a crash between the charge and the key row double-charges"; "a crash after reserving wedges the key until an operator clears it" |
-| lock | `just check-tla` |
+| domain question | Does the provider dedupe on our key for at least as long as the caller keeps retrying, and may a retry resume a key it finds in `reserved`? |
+| decision | bug (demo); fixed variant `IdempotentRetry.cfg` (reserve-first + takeover + provider dedupe) is the CI check |
+| lock | `just check-tla` (runs `IdempotentRetry.cfg` green, and `_late` / `_blocking` expecting their violations); `cd usecases/idempotency-key/repro && node --test handler.test.ts` |
 
 ## What this does NOT catch
 
