@@ -1,0 +1,38 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 63 and seed 130021864829530538 with 1 worker on 10 cores with 7282MB heap and 64MB offheap memory (Mac OS X 26.6.2 aarch64, Azul Systems, Inc. 1.8.0_422 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /Users/mz/ghq/github.com/mizchi/formal-methods-playground/languages/tla/IdempotentRetry.tla
+Parsing file /private/var/folders/_h/_rf455xj4h3_3g6z86pg244c0000gn/T/Naturals.tla
+Semantic processing of module Naturals
+Semantic processing of module IdempotentRetry
+Starting... (2026-09-27 01:09:11)
+Implied-temporal checking--satisfiability problem has 1 branches.
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-27 01:09:11.
+Progress(4) at 2026-09-27 01:09:11: 6 states generated, 6 distinct states found, 0 states left on queue.
+Checking temporal properties for the complete state space with 6 total distinct states at (2026-09-27 01:09:11)
+Error: Temporal properties were violated.
+
+Error: The following behavior constitutes a counter-example:
+
+State 1: <Initial predicate>
+/\ crashes = 0
+/\ rec = "none"
+/\ pc = "idle"
+/\ charges = 0
+
+State 2: <Begin line 62, col 5 to line 76, col 37 of module IdempotentRetry>
+/\ crashes = 0
+/\ rec = "reserved"
+/\ pc = "charging"
+/\ charges = 0
+
+State 3: <Crash line 98, col 5 to line 102, col 33 of module IdempotentRetry>
+/\ crashes = 1
+/\ rec = "reserved"
+/\ pc = "idle"
+/\ charges = 0
+
+State 4: Stuttering
+Finished checking temporal properties in 00s at 2026-09-27 01:09:11
+6 states generated, 6 distinct states found, 0 states left on queue.
+Finished in 00s at (2026-09-27 01:09:11)
