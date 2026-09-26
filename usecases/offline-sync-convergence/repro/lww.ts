@@ -22,7 +22,7 @@ export function replay(merge: typeof mergeNaive, updates: Update[]): string | un
   return state?.value;
 }
 
-// A per-replica clock that never repeats a stamp (a Lamport-style bump).
+// A per-replica clock that never repeats a stamp (bump past the last stamp).
 export function monotonicClock(now: () => number) {
   let last = -Infinity;
   return () => {
