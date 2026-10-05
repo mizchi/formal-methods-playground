@@ -5,11 +5,16 @@ on:
   pull_request:
     paths:
       - ".github/workflows/tla.yml"
+      - "claims/**"
       - "flake.lock"
       - "flake.nix"
       - "justfile"
       - "languages/tla/**"
+      - "scripts/check-claims.py"
       - "scripts/check-tla.sh"
+      - "scripts/trace-to-tla.sh"
+      - "usecases/**/README.md"
+      - "usecases/write-skew-seat-limit/traces/**"
   workflow_dispatch:
 
 concurrency:

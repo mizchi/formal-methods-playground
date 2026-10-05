@@ -200,3 +200,42 @@ drift class は `harness-drift` として扱う。
 - epistemic status
 
 テンプレートは [drift ledger template](templates/drift-ledger.md) に置く。
+
+## 台帳をオラクルに載せる
+
+上の台帳は、人が埋める前提で書かれている。だが
+`previous_machine_result` / `current_machine_result` / `epistemic_status` の
+3 つは人の記憶に置いてよい情報ではない。ここが散文のままだと、
+**drift は「気づいた人がいたとき」だけ見つかる**ことになる。
+
+この repo ではその 3 つを [`claims/catalog.json`](../claims/catalog.json) に移し、
+[`scripts/check-claims.py`](../scripts/check-claims.py) をそのオラクルにしている。
+カタログは claim ごとに「ドメインの主張」と「それを支えるはずの機械結果」を
+1 対 1 で結び、オラクルは全件を実行して、**まだ同じことを言っているか**を判定する。
+
+効くのは green ではなく **breaking variant の側**である。
+不変条件を 1 文字弱めると、green は green のまま通る（弱い性質はやはり成り立つ）。
+壊れるはずの config が壊れなくなったことは、誰も見ていなければ誰も気づかない。
+
+```text
+$ # SeatsWithinLimit を members <= SeatLimit から <= SeatLimit + 1 に弱める
+$ ./scripts/check-tla.sh   # 緑だけを見ていた頃のもの
+8 specs green, exit 0
+```
+
+オラクルはこれを drift class 付きで落とす。
+
+```text
+DRIFT SEAT-LIMIT-003  [model-drift or spec-drift]
+      drift   : the breaking variant stopped breaking
+```
+
+class を出すのが要点である。「CI が赤い」では次に開くファイルが決まらないが、
+`model-drift` なのか `harness-drift` なのかが分かれば決まる。
+このためにカタログは、結果そのもの（`no-error` / どの invariant が破れたか /
+counterexample に出るべき witness）と、状態数のような harness 寄りの値を
+別の欄に分けて持っている。
+
+台帳のうち機械に渡せない欄 —— `domain_question`、`recommended_fix_target`、
+`source_of_truth` —— は人の側に残る。オラクルは
+**判断を代行しない。判断すべき瞬間を見逃さないようにするだけ**である。

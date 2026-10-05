@@ -2,6 +2,13 @@
 
 形式モデルがすでにある状態で、仕様・コード・モデル・ログの drift を確認するときの台帳。
 
+この repo では `check_command` / `previous_machine_result` /
+`current_machine_result` / `epistemic_status` の 4 欄を
+[`claims/catalog.json`](../../claims/catalog.json) に移し、
+[`scripts/check-claims.py`](../../scripts/check-claims.py) が毎回判定している。
+残りの欄 —— とくに `domain_question` と `recommended_fix_target` —— は
+人が埋めるものとして残る。
+
 ```text
 claim_id:
   安定した ID。例: AUTHZ-SETTINGS-001, POLICY-MISSING-001。

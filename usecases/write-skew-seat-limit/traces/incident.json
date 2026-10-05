@@ -1,0 +1,15 @@
+{
+  "org_id": 4821,
+  "plan_seat_limit": 1,
+  "window": "2026-08-21T14:40:11Z .. 14:40:12Z",
+  "source": "postgres statement log joined to the app request log on backend_pid",
+  "note": "INC-2291. Two admins clicked Invite inside the same 40ms. Both requests returned 201 and the org finished with two members on a one-seat plan. Ops maintain the pool is set to SERIALIZABLE.",
+  "events": [
+    { "ts": "14:40:11.203", "txn": "t1", "op": "select", "sql": "SELECT count(1) FROM members WHERE org_id = 4821", "returned": 0 },
+    { "ts": "14:40:11.208", "txn": "t1", "op": "insert", "sql": "INSERT INTO members (org_id, user_id) VALUES (4821, 90311)" },
+    { "ts": "14:40:11.221", "txn": "t2", "op": "select", "sql": "SELECT count(1) FROM members WHERE org_id = 4821", "returned": 0 },
+    { "ts": "14:40:11.234", "txn": "t1", "op": "commit", "sql": "COMMIT" },
+    { "ts": "14:40:11.240", "txn": "t2", "op": "insert", "sql": "INSERT INTO members (org_id, user_id) VALUES (4821, 90502)" },
+    { "ts": "14:40:11.247", "txn": "t2", "op": "commit", "sql": "COMMIT" }
+  ]
+}

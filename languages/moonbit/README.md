@@ -71,7 +71,7 @@ nix develop -c just check-with-prove
 | [`mizchi/quint-connect-moonbit`](https://github.com/mizchi/quint-connect-moonbit) | package `mizchi/quint_connect`。MoonBitからQuintを起動し、複数のsimulation traceとnested named-test traceを実装へreplayする独立runtime adapter |
 
 The checkout validator is intentionally mirrored in
-[`../languages/z3/checkout_form.smt2`](../languages/z3/checkout_form.smt2). The MoonBit
+[`../z3/checkout_form.smt2`](../z3/checkout_form.smt2). The MoonBit
 code is the executable implementation; the Z3 file asks direct
 "does a counter-example exist?" questions over the same predicate.
 
