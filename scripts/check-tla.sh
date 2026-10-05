@@ -8,7 +8,11 @@ set -euo pipefail
 # Expected results are not written here. They live in claims/catalog.json, and
 # scripts/check-claims.py is the oracle: it runs every config -- green checks
 # and breaking variants alike -- and compares the outcome, the invariant that
-# broke and the witness against the claim. Asserting only "tlc exited 0" let a
-# weakened invariant leave the green checks green and the breaking variants
-# quietly not breaking.
+# broke, the witness the counterexample must still show, and the state count
+# against the claim. It also refuses a .cfg that no claim covers, and a green
+# claim with neither a breaking variant nor a written reason for not having one.
+#
+# This replaces the run_tlc / run_tlc_expect_violation pair that used to live
+# here. Same discipline, one more step: the expectations are data rather than
+# arguments at a call site, so the READMEs can be checked against them too.
 ./scripts/check-claims.py --tool tlc

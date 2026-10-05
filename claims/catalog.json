@@ -240,12 +240,13 @@
     },
     {
       "claim_id": "SEAT-LIMIT-002",
-      "domain_claim": "committed member rows never exceed the plan's seat limit — held by an explicit row lock instead of the isolation level",
+      "domain_claim": "committed member rows never exceed the plan's seat limit — held by an explicit row lock, and only because the count is read with a fresh snapshot after the lock is granted",
       "source_of_truth": "the invite handler's SQL and the isolation level the pool actually sets",
       "timing": "T0",
       "role": "green",
       "guarded_by": [
-        "SEAT-LIMIT-003"
+        "SEAT-LIMIT-003",
+        "SEAT-LIMIT-004"
       ],
       "tool": "tlc",
       "spec": "languages/tla/SeatLimitWriteSkew.tla",
@@ -255,7 +256,7 @@
         "distinct_states": 11,
         "depth": 6
       },
-      "domain_wording": "SELECT ... FOR UPDATE on the org row materialises the conflict the two inserts do not have, so snapshot isolation is enough",
+      "domain_wording": "SELECT ... FOR UPDATE on the org row materialises the conflict the two inserts do not have — but only under READ COMMITTED, where the count is re-read after the lock",
       "documented_in": [
         "usecases/write-skew-seat-limit/README.md"
       ],
@@ -290,6 +291,35 @@
       ],
       "doc_claims": [
         "`SeatsWithinLimit` violated"
+      ]
+    },
+    {
+      "claim_id": "SEAT-LIMIT-004",
+      "domain_claim": "under REPEATABLE READ the row lock does not save the seat limit, because the snapshot is taken before the lock wait",
+      "source_of_truth": "PostgreSQL's snapshot timing, reproduced against PostgreSQL 17 in repro/invite.test.ts",
+      "timing": "T0",
+      "role": "breaking",
+      "guards": [
+        "SEAT-LIMIT-002"
+      ],
+      "tool": "tlc",
+      "spec": "languages/tla/SeatLimitWriteSkew.tla",
+      "config": "languages/tla/SeatLimitWriteSkew_rrlock.cfg",
+      "expect": {
+        "outcome": "invariant-violated",
+        "invariant": "SeatsWithinLimit",
+        "witness": [
+          "members = 2"
+        ],
+        "distinct_states": 27,
+        "depth": 9
+      },
+      "domain_wording": "adding FOR UPDATE to a REPEATABLE READ transaction does not fix the seat limit: the count read after the lock is granted is the stale one, so the second invite still passes",
+      "documented_in": [
+        "usecases/write-skew-seat-limit/README.md"
+      ],
+      "doc_claims": [
+        "`Invariant SeatsWithinLimit is violated` (`members = 2`)"
       ]
     },
     {

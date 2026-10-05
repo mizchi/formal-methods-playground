@@ -82,13 +82,18 @@ it checkable instead of implicit.
 
 | field | value |
 | --- | --- |
-| source of truth | the client's merge function and the clock that stamps updates |
-| claim | replicas that received the same set of updates display the same value |
+| source | the client's merge function and the clock that stamps updates |
+| expected claim | replicas that received the same set of updates display the same value |
+| implementation observation | `repro/lww.ts`: `mergeNaive` keeps the local value on a timestamp tie; `mergeWithTiebreak` breaks ties on replica id, which is only total if one replica never repeats a stamp |
 | model question | does the winner relation have a unique maximum on every inbox? |
 | tool | Alloy 6 (scope 6, 4 Int) |
-| machine result | 4 checks UNSAT, 4 runs SAT |
+| machine result | 4 checks UNSAT (`TiebreakIsCommutative`, `TiebreakIsAssociative`, `EveryReplicaConverges`, `SameUpdatesSameState`), 4 runs SAT (`NaiveTieDiverges`, `NaiveReplicaHasNoUniqueWinner`, `RepeatedStampBreaksTiebreak`, `ConcurrentEditsExist`) |
+| witness | `NaiveTieDiverges`: two replicas stamp the same time; `RepeatedStampBreaksTiebreak`: one replica stamps two updates with the same time |
+| reproduction | reproduced: `repro/lww.test.ts` shows the naive merge diverging for A and B at `time = 1000`, the tiebreak converging, a repeated stamp from A at `time = 2000` diverging again, and `monotonicClock` restoring convergence |
 | domain wording | "last-writer-wins converges only with a total tiebreak *and* per-replica-unique stamps; with `>=` and a wall clock, two devices can disagree forever" |
-| lock | `just check-alloy` |
+| domain question | Does every client stamp edits from a clock that never repeats per device (monotonic counter / hybrid logical clock), or from `Date.now()`? |
+| decision | bug (demo); `winner` under `UniqueStamps` is the checked design: it needs both the replica-id tiebreak and unique per-replica stamps |
+| lock | `just check-alloy`; `cd usecases/offline-sync-convergence/repro && node --test lww.test.ts` |
 
 ## What this does NOT catch
 

@@ -26,6 +26,7 @@ database; model the snapshot read, the guard, and the commit rule.
 | Can two concurrent invites exceed the seat limit? | write skew over commit interleavings | TLA+ | both read `count = 0`, both insert |
 | Does the isolation level we actually run at prevent it? | same model, different commit rule | TLA+ | `REPEATABLE READ` vs `SERIALIZABLE` |
 | Does an explicit row lock prevent it? | same model, mutual exclusion | TLA+ | `SELECT ... FOR UPDATE` on the org row |
+| Does the lock still help under REPEATABLE READ? | same model, snapshot taken before the lock wait | TLA+ | `REPEATABLE READ` + `FOR UPDATE` |
 | Which isolation level were we *actually* on last Tuesday? | replay the production log against the same model | TLA+ | the log's second `COMMIT` succeeded, which SSI would not allow |
 
 ## Probe: TLA+
@@ -38,13 +39,15 @@ database; model the snapshot read, the guard, and the commit rule.
 | --- | --- |
 | `"SI"` | snapshot read, first-committer-wins on the *same* row (PostgreSQL `REPEATABLE READ`, MySQL default) |
 | `"SERIALIZABLE"` | PostgreSQL SSI: abort at commit if the read set moved |
-| `"SI_LOCK"` | still SI, but `SELECT ... FOR UPDATE` on the org row first |
+| `"SI_LOCK"` | `SELECT ... FOR UPDATE` on the org row first, then read the count with a fresh snapshot (PostgreSQL `READ COMMITTED`) |
+| `"RR_LOCK"` | the same lock under PostgreSQL `REPEATABLE READ`: the snapshot is taken before the locking statement waits |
 
 | Command | Expected | Domain meaning |
 | --- | --- | --- |
 | `tlc -config SeatLimitWriteSkew.cfg SeatLimitWriteSkew.tla` | no error (21 states, depth 7) | SSI aborts the second transaction; the limit holds |
 | `tlc -config SeatLimitWriteSkew_si.cfg SeatLimitWriteSkew.tla` | `Invariant SeatsWithinLimit is violated` (`members = 2`, limit 1) | breaking variant: plain snapshot isolation admits the write skew |
 | `tlc -config SeatLimitWriteSkew_lock.cfg SeatLimitWriteSkew.tla` | no error (11 states, depth 6) | the explicit lock materialises the missing conflict |
+| `tlc -config SeatLimitWriteSkew_rrlock.cfg SeatLimitWriteSkew.tla` | `Invariant SeatsWithinLimit is violated` (`members = 2`) | breaking variant: under `REPEATABLE READ` the lock is granted after the stale snapshot was taken, so it does not help |
 
 Two green configs is deliberate. They are green for *different reasons*
 (commit-time abort vs. mutual exclusion), so a change that drops one — someone
@@ -54,6 +57,34 @@ the isolation level — cannot pass by leaning on the other.
 ```sh
 nix develop -c just check-tla
 nix develop -c bash -c 'cd languages/tla && tlc -config SeatLimitWriteSkew_si.cfg SeatLimitWriteSkew.tla'
+nix develop -c bash -c 'cd languages/tla && tlc -config SeatLimitWriteSkew_rrlock.cfg SeatLimitWriteSkew.tla'
+```
+
+## The lock only works under READ COMMITTED
+
+`SI_LOCK` used to be described as "still SI, plus `FOR UPDATE`". That is not
+what PostgreSQL does. Under `REPEATABLE READ` the transaction snapshot is taken
+when the first statement starts; if that statement is the `SELECT ... FOR
+UPDATE` and it blocks, the snapshot is already fixed, and the count read after
+the lock is granted is the stale one. The second invite still passes the check.
+
+[`repro/`](repro/) runs the handler against PostgreSQL 17 with two
+connections, pausing the first request after its read:
+
+| Isolation | without `FOR UPDATE` | with `FOR UPDATE` |
+| --- | --- | --- |
+| `READ COMMITTED` (PostgreSQL default) | 2 members | 1 member (second invite sees the new count) |
+| `REPEATABLE READ` | 2 members | **2 members** |
+| `SERIALIZABLE` | 1 member (one `40001`) | 1 member (one `40001`) |
+
+`RR_LOCK` models the stale snapshot and reproduces the same trace in TLC.
+`SI_LOCK` is correct for `READ COMMITTED`, where every statement takes a new
+snapshot.
+
+```sh
+cd usecases/write-skew-seat-limit/repro
+pnpm install
+PGHOST=localhost PGPORT=5432 pnpm test   # needs a PostgreSQL, e.g. postgres:17 in Docker
 ```
 
 ## The trace to show a reviewer
@@ -157,15 +188,20 @@ replaying around it. Drift in the log's vocabulary is drift worth a red build.
 
 | field | value |
 | --- | --- |
-| source of truth | the invite handler's SQL and the isolation level the pool actually sets |
-| claim | committed member rows never exceed the plan's seat limit |
-| model question (T0) | is there a commit interleaving with `members > SeatLimit`? |
-| model question (T5) | is last Tuesday's log a behaviour this model admits, at the isolation level we claim? |
+| source | the invite handler's SQL and the isolation level the pool actually sets |
+| expected claim | committed member rows never exceed the plan's seat limit |
+| implementation observation | `repro/invite.ts` counts members, checks the limit, then inserts, optionally after `SELECT ... FOR UPDATE` on the org row; against PostgreSQL 17, only `READ COMMITTED` + `FOR UPDATE` and `SERIALIZABLE` keep one member |
+| model question | is there a commit interleaving with `members > SeatLimit`? |
+| model question (T5) | is last Tuesday's log a behaviour this same model admits, at the isolation level we claim to run? |
 | tool | TLA+ (TLC) |
-| machine result (T0) | SERIALIZABLE: no error / SI: `SeatsWithinLimit` violated, `members = 2` / SI_LOCK: no error |
-| machine result (T5) | incident log at SERIALIZABLE: `TraceAccepted` violated at line 6 / at SI: `SeatsWithinLimit` violated, `members = 2` |
-| domain wording | "under REPEATABLE READ, two simultaneous invites both pass the seat check and both commit — and the log says REPEATABLE READ is what we were running" |
-| lock | `just check-tla` |
+| machine result | SERIALIZABLE: no error / SI: `SeatsWithinLimit` violated, `members = 2` / SI_LOCK: no error / RR_LOCK: `SeatsWithinLimit` violated, `members = 2` |
+| machine result (T5) | incident log replayed at SERIALIZABLE: `TraceAccepted` violated at log line 6 / the same log at SI: `SeatsWithinLimit` violated, `members = 2` |
+| witness | SI: both transactions read `count = 0`, both insert, both commit (see "The trace to show a reviewer"); RR_LOCK ends the same way |
+| reproduction | The SI trace reproduced (`REPEATABLE READ` without the lock: 2 members). The old `SI_LOCK` model did not match: it was green, but `REPEATABLE READ` + `FOR UPDATE` still admitted 2 members, because PostgreSQL takes the snapshot before the lock wait. Model bug; corrected as `RR_LOCK`, which reproduces the trace, and `SI_LOCK` now models `READ COMMITTED` (1 member). |
+| domain wording | "under REPEATABLE READ, two simultaneous invites both pass the seat check and both commit -- and adding FOR UPDATE does not change that; use READ COMMITTED + FOR UPDATE or SERIALIZABLE" |
+| domain question | Which isolation level does the connection pool actually set, and does the caller retry a `40001` under `SERIALIZABLE`? |
+| decision | bug in the handler, plus model bug (`SI_LOCK` corrected as `RR_LOCK`); `SeatLimitWriteSkew.cfg` (SERIALIZABLE) is the CI check |
+| lock | `just check-tla`, which runs every claim in [`claims/catalog.json`](../../claims/catalog.json) through the oracle — the greens, the `_si` / `_rrlock` breaking variants, and the four T5 replays — and compares outcome, invariant, witness and state count against what is catalogued; `cd usecases/write-skew-seat-limit/repro && pnpm test` (needs PostgreSQL) |
 
 ## What this does NOT catch
 

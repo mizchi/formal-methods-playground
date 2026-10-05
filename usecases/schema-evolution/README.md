@@ -78,13 +78,18 @@ skips a phase turns a `unsat` into a `sat`.
 
 | field | value |
 | --- | --- |
-| source of truth | v1 and v2 writer/reader code, plus the fallback branch for unknown values |
-| claim | during the deploy window every record either side writes is accepted *and* correctly acted on by the other |
+| source | v1 and v2 writer/reader code, plus the fallback branch for unknown values |
+| expected claim | during the deploy window every record either side writes is accepted *and* correctly acted on by the other |
+| implementation observation | `repro/orders.ts`: the strict v2 reader requires `currency`, the strict v1 reader rejects `refunded`, and `v1ReadFallbackPending` maps an unknown status to `pending`, which `v1Process` captures |
 | model question | is there a record one version can write that the other rejects, or acts on wrongly? |
 | tool | Z3 |
 | machine result | `sat, sat, unsat, unsat, sat, unsat` |
+| witness | v1 record `{ status: pending }` with no `currency` (check 1); v2 record `{ status: refunded, currency: JPY }` (checks 2 and 5) |
+| reproduction | reproduced: `repro/orders.test.ts` feeds both records to the six readers; the strict readers reject, the tolerant ones accept, the fail-open fallback captures `o2`, and the fail-closed fallback captures nothing |
 | domain wording | "old pods dead-letter refunded orders, and if we make them tolerant naively they will re-capture them instead" |
-| lock | `just check-z3` |
+| domain question | Which side ships first, and should v1 map an unknown status to a non-actionable hold rather than `pending`? |
+| decision | bug (demo); tolerant readers with the fail-closed `hold` fallback, shipped in expand -> migrate -> contract order, are the checked design |
+| lock | `just check-z3` (`check_schema_evolution.sh` pins all six results); `cd usecases/schema-evolution/repro && node --test orders.test.ts` |
 
 ## What this does NOT catch
 

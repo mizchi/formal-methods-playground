@@ -12,12 +12,19 @@ were never run by CI at all, and all the interesting ones were among them. So:
 
 ```
 $ # weaken SeatsWithinLimit from `members <= SeatLimit` to `<= SeatLimit + 1`
-$ ./scripts/check-tla.sh    # the old one, green checks only
+$ ./scripts/check-tla.sh    # green checks only, as it stood at d5dc026
 8 specs green, exit 0
 ```
 
 Nothing notices. The green check stays green — a weaker invariant still holds —
 and the breaking variant quietly stops breaking, which no one was looking at.
+
+`check-tla.sh` has since grown a `run_tlc_expect_violation` that asserts each
+breaking variant fails with a named string, which closes that particular hole
+on its own. What the catalog adds on top is the rest of the pairing: the
+**witness** the counterexample must still show, the state count, the prose in
+the README, and the questions no call site can ask — is every `.cfg` claimed,
+is every green claim guarded.
 
 [`catalog.json`](catalog.json) is the fix, and
 [`scripts/check-claims.py`](../scripts/check-claims.py) is the oracle over it:
@@ -98,15 +105,18 @@ which file you go and edit.
 Beyond running each claim, the oracle checks the catalog itself:
 
 - every `.cfg` under `languages/tla/` has exactly one claim — you cannot add a
-  config CI does not run;
+  config CI does not run. This is not hypothetical: `SeatLimitWriteSkew_rrlock`
+  arrived on `main` while this branch was open, and the oracle refused the tree
+  until it was catalogued;
 - every green claim is either `guarded_by` a breaking variant or carries an
   `unguarded_reason` — you cannot add a green check nothing can falsify without
   saying so in writing;
 - `guards` and `guarded_by` agree in both directions;
 - `claim_id`s are unique.
 
-Five claims currently carry an `unguarded_reason`. That is a declared gap, not
-a hidden one, and it is the honest place to start if you want to add a probe.
+Five of the eighteen claims currently carry an `unguarded_reason`. That is a
+declared gap, not a hidden one, and it is the honest place to start if you want
+to add a probe.
 
 ## Adding a claim
 

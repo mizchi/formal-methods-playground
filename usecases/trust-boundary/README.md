@@ -40,12 +40,17 @@ nix develop -c just check-z3
 
 | field | value |
 | --- | --- |
-| source of truth | the identity-resolution function + the deployment's trust boundary |
-| claim | the resolved identity is never a value the caller freely chose |
+| source | the identity-resolution function + the deployment's trust boundary |
+| expected claim | the resolved identity is never a value the caller freely chose |
+| implementation observation | the current resolver adopts the caller param unconditionally at the top of the chain (param, edge header, forwarded-for header, connection peer) |
 | model question | is there caller input making `resolve(...) = EVIL` with `EVIL` != the real peer? |
 | tool | Z3 |
 | machine result | sat, sat (spoofable) / unsat (guarded) |
+| witness | the caller sets `param = EVIL`, behind a trusted LB (check 1) and connecting directly (check 2); the script prints no model |
+| reproduction | none yet |
 | domain wording | "any caller can set the resolved client IP by adding a query param, independent of the connection; gating the param on a trusted marker closes it" |
+| domain question | Does the edge actually strip caller-set headers, and which authorization, geo, rate-limit, or billing decisions consume the resolved value? |
+| decision | bug (demo); the guarded resolver (caller sources gated on a trusted marker) is the fixed variant, checked `unsat` |
 | lock | `just check-z3` |
 
 ## What this does NOT catch

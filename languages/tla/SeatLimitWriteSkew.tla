@@ -22,27 +22,37 @@
  *                  Different rows never conflict -> write skew is allowed.
  *   "SERIALIZABLE" PostgreSQL SERIALIZABLE / SSI: a transaction whose read
  *                  set changed underneath it aborts at commit.
- *   "SI_LOCK"      still SI, but the request takes a row lock on the org
- *                  first (SELECT ... FOR UPDATE on organizations).
- *                  The lock materialises the missing conflict.
+ *   "SI_LOCK"      the request takes a row lock on the org first
+ *                  (SELECT ... FOR UPDATE on organizations) and reads the
+ *                  count AFTER the lock is granted, with a fresh snapshot.
+ *                  In PostgreSQL this is READ COMMITTED + FOR UPDATE, where
+ *                  every statement takes a new snapshot. The lock
+ *                  materialises the missing conflict.
+ *   "RR_LOCK"      PostgreSQL REPEATABLE READ + FOR UPDATE. The snapshot is
+ *                  taken when the first statement starts -- before that
+ *                  statement waits for the lock -- so the count read after
+ *                  the lock is still the stale one. The lock does NOT help.
  *
  * Run (from this directory, inside the nix devShell):
  *
  *   tlc -config SeatLimitWriteSkew.cfg      SeatLimitWriteSkew.tla  # no error
  *   tlc -config SeatLimitWriteSkew_si.cfg   SeatLimitWriteSkew.tla  # SeatsWithinLimit violated
  *   tlc -config SeatLimitWriteSkew_lock.cfg SeatLimitWriteSkew.tla  # no error
+ *   tlc -config SeatLimitWriteSkew_rrlock.cfg SeatLimitWriteSkew.tla # SeatsWithinLimit violated
  *
  * SeatLimitWriteSkew.cfg (SERIALIZABLE) is the CI-green check. The _si cfg is
  * the load-bearing breaking variant: it prints the two-admin trace that puts
  * the org one seat over. The _lock cfg shows the fix most teams actually ship,
  * and is green for a different reason -- worth keeping both so a future change
- * to the isolation level cannot silently pass.
+ * to the isolation level cannot silently pass. The _rrlock cfg is the second
+ * breaking variant: the same lock under REPEATABLE READ still overbooks, which
+ * usecases/write-skew-seat-limit/repro reproduces against PostgreSQL 17.
  *)
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS Txns,      \* concurrent requests, e.g. {t1, t2}
           SeatLimit, \* seats the org's plan allows
-          Isolation  \* "SI" | "SERIALIZABLE" | "SI_LOCK"
+          Isolation  \* "SI" | "SERIALIZABLE" | "SI_LOCK" | "RR_LOCK"
 
 VARIABLES members,  \* committed member rows for this org
           snap,     \* per-txn snapshot of the count it read
@@ -51,7 +61,7 @@ VARIABLES members,  \* committed member rows for this org
 
 vars == <<members, snap, pc, lock>>
 
-PcStates == {"idle", "read", "inserted", "committed", "aborted"}
+PcStates == {"idle", "begun", "read", "inserted", "committed", "aborted"}
 
 Init ==
     /\ members = 0
@@ -61,7 +71,25 @@ Init ==
 
 \* BEGIN + the counting SELECT. Under SI_LOCK this is
 \* `SELECT ... FOR UPDATE` on the org row, so it blocks while held.
+\* RR_LOCK: PostgreSQL REPEATABLE READ + SELECT ... FOR UPDATE.
+\* The snapshot is taken when the first statement starts -- before the
+\* statement waits for the lock -- so the count it later reads is stale.
+BeginRR(t) ==
+    /\ Isolation = "RR_LOCK"
+    /\ pc[t] = "idle"
+    /\ snap' = [snap EXCEPT ![t] = members]
+    /\ pc' = [pc EXCEPT ![t] = "begun"]
+    /\ UNCHANGED <<members, lock>>
+
+LockRR(t) ==
+    /\ pc[t] = "begun"
+    /\ lock = "none"
+    /\ lock' = t
+    /\ pc' = [pc EXCEPT ![t] = "read"]
+    /\ UNCHANGED <<members, snap>>
+
 Read(t) ==
+    /\ Isolation # "RR_LOCK"
     /\ pc[t] = "idle"
     /\ Isolation = "SI_LOCK" => lock = "none"
     /\ lock' = IF Isolation = "SI_LOCK" THEN t ELSE lock
@@ -96,7 +124,7 @@ Commit(t) ==
     /\ lock' = IF lock = t THEN "none" ELSE lock
     /\ UNCHANGED snap
 
-Next == \E t \in Txns : Read(t) \/ Insert(t) \/ Reject(t) \/ Commit(t)
+Next == \E t \in Txns : BeginRR(t) \/ LockRR(t) \/ Read(t) \/ Insert(t) \/ Reject(t) \/ Commit(t)
 
 Spec == Init /\ [][Next]_vars
 

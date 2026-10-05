@@ -59,13 +59,18 @@ nix develop -c just check-z3
 
 | field | value |
 | --- | --- |
-| source of truth | rate-limit enforcement code + configured limit set |
-| claim | grants never exceed the cap; every configured limit changes some decision |
+| source | rate-limit enforcement code + configured limit set |
+| expected claim | grants never exceed the cap; every configured limit changes some decision |
+| implementation observation | the naive variant splits read and record (`Atomic = FALSE`); the example config carries a 10/hour limit under a 1/hour limit |
 | model question | is there an interleaving with `granted > Cap`? is there a sequence satisfying `a` but violating `b`? |
 | tool | TLA+ (race) / Z3 (subsumption) |
 | machine result | atomic: no error / naive: `granted = Cap+1`; subsumption: unsat, unsat, sat |
+| witness | naive, `Cap = 1`: two workers both read the pre-grant count and both grant (`granted = 2`); `10/3600s` vs `2/10s`: 3 events in 10s stay under 10/hour |
+| reproduction | none yet; the README proposes inspecting the production write path or trace-checking real operations against `RateLimitRace` |
 | domain wording | "with a split read-then-record, two concurrent requests both pass the check and over-grant by one"; "the 10/hour cap under a 1/hour cap never fires" |
-| lock | `just check-tla`, `just check-z3` |
+| domain question | Does the production store do the check and the record as one conditional write? Is the subsumed 10/hour limit meant to be active? |
+| decision | bug (demo); atomic variant `RateLimitRace.cfg` is the CI check. The subsumed limit is unresolved (dead config to remove or re-tune). |
+| lock | `just check-tla` (runs `RateLimitRace.cfg` green, and the naive cfg expecting `NoOverGrant` to be violated), `just check-z3` |
 
 ## What this does NOT catch
 
